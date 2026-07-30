@@ -188,14 +188,14 @@
             <p>Save a separate published <code>webcal://</code> or <code>https://</code> link for each Apple calendar. Daniel OS securely fetches these feeds through your Supabase Edge Function.</p>
             <div id="calendarSubscriptions" class="subscription-list"></div>
             <div class="calendar-sync-window">
-              <label>Keep past events
-                <div><input id="applePastDays" type="number" min="0" max="3650" step="1" value="90"> <span>days</span></div>
+              <label>Import events starting
+                <div><input id="appleStartDate" type="date" value="2025-01-01"></div>
               </label>
               <label>Import future events
                 <div><input id="appleFutureDays" type="number" min="1" max="3650" step="1" value="730"> <span>days</span></div>
               </label>
             </div>
-            <p class="muted">Saving and refreshing replaces previously synced Apple events outside this window.</p>
+            <p class="muted">Saving and refreshing keeps Apple events from the selected start date onward and removes older synced events.</p>
             <div class="calendar-sync-actions">
               <button id="saveCalendarSubscriptions" class="primary">Save all calendars</button>
               <button id="refreshAppleCalendars" class="ghost">↻ Refresh Apple calendars</button>

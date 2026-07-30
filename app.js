@@ -1,6 +1,6 @@
 const KEY='danielOS.v1';
 const defaults={
-  days:{}, weeklyGoals:{}, monthlyGoals:{}, importedEvents:[], calendarSubscriptions:{}, calendarVisibility:{}, calendarSync:{}, calendarSyncSettings:{pastDays:90,futureDays:730}, reviews:{}, goals:[], systemData:{},
+  days:{}, weeklyGoals:{}, monthlyGoals:{}, importedEvents:[], calendarSubscriptions:{}, calendarVisibility:{}, calendarSync:{}, calendarSyncSettings:{startDate:'2025-01-01',futureDays:730}, reviews:{}, goals:[], systemData:{},
   top3:[
     {text:'Store: Set a clear peak plan and coach one observable behaviour.',done:false},
     {text:'Family: Give Mia and your wife an undistracted evening block.',done:false},
@@ -8,7 +8,7 @@ const defaults={
   ]
 };
 let state=load();
-state.days ||= {}; state.weeklyGoals ||= {}; state.monthlyGoals ||= {}; state.importedEvents ||= []; state.reviews ||= {}; state.calendarSubscriptions ||= {}; state.calendarVisibility ||= {}; state.calendarSync ||= {}; state.calendarSyncSettings ||= {pastDays:90,futureDays:730}; state.goals ||= []; state.systemData ||= {};
+state.days ||= {}; state.weeklyGoals ||= {}; state.monthlyGoals ||= {}; state.importedEvents ||= []; state.reviews ||= {}; state.calendarSubscriptions ||= {}; state.calendarVisibility ||= {}; state.calendarSync ||= {}; state.calendarSyncSettings ||= {startDate:'2025-01-01',futureDays:730}; state.goals ||= []; state.systemData ||= {};
 const CALENDARS=[{name:'Work Schedule',color:'#2f80ed'},{name:'Work',color:'#5b8cff'},{name:'Family',color:'#ff7f9f'},{name:'Personal',color:'#b083ff'},{name:'Leisure',color:'#f4b860'},{name:'Gym',color:'#52d19a'},{name:'Self Care',color:'#57c7d4'},{name:'OTHER',color:'#a8b0c3'}];
 const SYSTEMS=[
  {id:'starbucks',name:'Starbucks Command Centre',icon:'☕',className:'system-coffee',description:'Store performance, leadership, partner growth and customer experience.'},
@@ -203,8 +203,9 @@ function renderCalendar(){
  calendarSubscriptions.innerHTML=CALENDARS.map(c=>{const url=state.calendarSubscriptions[c.name]||'';return `<div class="subscription-row"><span class="calendar-dot" style="color:${c.color};background:${c.color}"></span><strong>${esc(c.name)}</strong><input data-calendar-url="${esc(c.name)}" type="url" value="${esc(url)}" placeholder="webcal://..."><a class="button-link ghost open-subscription ${url?'':'hidden'}" data-open-calendar="${esc(c.name)}" href="${esc(url)}">Open</a></div>`}).join('');
  calendarFilters.innerHTML=CALENDARS.map(c=>`<label class="calendar-filter ${state.calendarVisibility[c.name]?'':'off'}" style="--calendar-color:${c.color}"><input data-calendar-visible="${esc(c.name)}" type="checkbox" ${state.calendarVisibility[c.name]?'checked':''}><span class="calendar-dot" style="background:${c.color};color:${c.color}"></span>${esc(c.name)}</label>`).join('');
  const sync=state.calendarSync||{};
- const windowSettings=state.calendarSyncSettings||{pastDays:90,futureDays:730};
- if(window.applePastDays)applePastDays.value=Number.isFinite(Number(windowSettings.pastDays))?windowSettings.pastDays:90;
+ const windowSettings=state.calendarSyncSettings||{startDate:'2025-01-01',futureDays:730};
+ const migratedStartDate=windowSettings.startDate||'2025-01-01';
+ if(window.appleStartDate)appleStartDate.value=migratedStartDate;
  if(window.appleFutureDays)appleFutureDays.value=Number.isFinite(Number(windowSettings.futureDays))?windowSettings.futureDays:730;
  const last=sync.lastRefreshedAt?new Date(sync.lastRefreshedAt).toLocaleString('en-CA'):'Never';
  const errorText=Array.isArray(sync.errors)&&sync.errors.length?` · ${sync.errors.length} calendar${sync.errors.length===1?'':'s'} had an error`:'';
@@ -220,7 +221,7 @@ function parseICS(text){
   const s=parse(raw),en=rawEnd?parse(rawEnd):{time:''};return {date:s.date,start:s.time,end:en.time,title:get('SUMMARY')||'Calendar event',note:get('DESCRIPTION')}
  }).filter(e=>e.date)
 }
-saveCalendarSubscriptions.onclick=()=>{document.querySelectorAll('[data-calendar-url]').forEach(x=>state.calendarSubscriptions[x.dataset.calendarUrl]=x.value.trim());state.calendarSyncSettings={pastDays:Math.max(0,Math.min(3650,Number(applePastDays.value)||0)),futureDays:Math.max(1,Math.min(3650,Number(appleFutureDays.value)||730))};save();renderCalendar();calendarSyncStatus.textContent='Calendar links and sync window saved. Click Refresh Apple calendars to apply it.'};
+saveCalendarSubscriptions.onclick=()=>{document.querySelectorAll('[data-calendar-url]').forEach(x=>state.calendarSubscriptions[x.dataset.calendarUrl]=x.value.trim());state.calendarSyncSettings={startDate:appleStartDate.value||'2025-01-01',futureDays:Math.max(1,Math.min(3650,Number(appleFutureDays.value)||730))};save();renderCalendar();calendarSyncStatus.textContent='Calendar links and sync window saved. Click Refresh Apple calendars to apply it.'};
 refreshAppleCalendars.onclick=async()=>{
  const button=refreshAppleCalendars;button.disabled=true;calendarSyncStatus.textContent='Refreshing published Apple calendars…';
  try{
