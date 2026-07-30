@@ -66,6 +66,21 @@
 
   window.DanielCloud = {
     status: () => ({ configured, signedIn: Boolean(user), syncing }),
+    async refreshAppleCalendars() {
+      if (!client || !user) throw new Error('Sign in to Supabase before refreshing calendars.');
+      syncing = true; refreshStatus();
+      try {
+        const { data, error } = await client.functions.invoke('sync-apple-calendars', { body: {} });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (data?.state) {
+          localStorage.setItem(LOCAL_KEY, JSON.stringify(data.state));
+        }
+        return data;
+      } finally {
+        syncing = false; refreshStatus();
+      }
+    },
     scheduleSave(nextState) {
       if (!user) return;
       clearTimeout(timer);

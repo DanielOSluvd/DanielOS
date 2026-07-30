@@ -80,3 +80,8 @@ Version 6 adds a dedicated Calendar View with daily, weekly, and monthly layouts
 
 ## Supabase cloud edition
 This build includes optional Supabase email/password authentication and automatic cloud sync. Follow `DEPLOY_TO_SUPABASE.md`, run `supabase-schema.sql`, and enter the project URL plus publishable/anon key in `config.js`.
+
+
+## Apple Calendar live refresh
+
+Version 8 adds an authenticated Supabase Edge Function that fetches published Apple Calendar feeds. See `APPLE_CALENDAR_SYNC_SETUP.md`.

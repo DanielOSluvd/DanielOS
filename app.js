@@ -1,6 +1,6 @@
 const KEY='danielOS.v1';
 const defaults={
-  days:{}, weeklyGoals:{}, monthlyGoals:{}, importedEvents:[], calendarSubscriptions:{}, calendarVisibility:{}, reviews:{}, goals:[], systemData:{},
+  days:{}, weeklyGoals:{}, monthlyGoals:{}, importedEvents:[], calendarSubscriptions:{}, calendarVisibility:{}, calendarSync:{}, reviews:{}, goals:[], systemData:{},
   top3:[
     {text:'Store: Set a clear peak plan and coach one observable behaviour.',done:false},
     {text:'Family: Give Mia and your wife an undistracted evening block.',done:false},
@@ -8,7 +8,7 @@ const defaults={
   ]
 };
 let state=load();
-state.days ||= {}; state.weeklyGoals ||= {}; state.monthlyGoals ||= {}; state.importedEvents ||= []; state.reviews ||= {}; state.calendarSubscriptions ||= {}; state.calendarVisibility ||= {}; state.goals ||= []; state.systemData ||= {};
+state.days ||= {}; state.weeklyGoals ||= {}; state.monthlyGoals ||= {}; state.importedEvents ||= []; state.reviews ||= {}; state.calendarSubscriptions ||= {}; state.calendarVisibility ||= {}; state.calendarSync ||= {}; state.goals ||= []; state.systemData ||= {};
 const CALENDARS=[{name:'Work Schedule',color:'#2f80ed'},{name:'Work',color:'#5b8cff'},{name:'Family',color:'#ff7f9f'},{name:'Personal',color:'#b083ff'},{name:'Leisure',color:'#f4b860'},{name:'Gym',color:'#52d19a'},{name:'Self Care',color:'#57c7d4'},{name:'OTHER',color:'#a8b0c3'}];
 const SYSTEMS=[
  {id:'starbucks',name:'Starbucks Command Centre',icon:'☕',className:'system-coffee',description:'Store performance, leadership, partner growth and customer experience.'},
@@ -152,10 +152,14 @@ function renderCalendarWeek(){let start=mondayOf(visualCalendarDate),days=Array.
 function renderCalendarMonth(){const first=new Date(monthStart(visualCalendarDate)+'T12:00:00'),year=first.getFullYear(),month=first.getMonth();visualCalendarTitle.textContent=first.toLocaleDateString('en-CA',{month:'long',year:'numeric'});let start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));let days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return localDateKey(d)});let cols=7,weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];if(!showWeekends.checked){days=days.filter(d=>{const x=new Date(d+'T12:00:00').getDay();return x!==0&&x!==6});cols=5;weekdays=weekdays.slice(0,5)}let html=`<div class="month-calendar" style="--month-cols:${cols}">`;weekdays.forEach(w=>html+=`<div class="month-weekday">${w}</div>`);days.forEach(d=>{const dt=new Date(d+'T12:00:00'),ev=eventsForDate(d);html+=`<div class="month-day ${dt.getMonth()!==month?'outside':''} ${d===localDateKey(new Date())?'today':''}"><div class="month-number"><span>${dt.getDate()}</span><small>${ev.length||''}</small></div>${ev.slice(0,4).map(e=>visualEvent(e,true)).join('')}${ev.length>4?`<small>+${ev.length-4} more</small>`:''}</div>`});html+='</div>';visualCalendarCanvas.innerHTML=html}
 
 function renderCalendar(){
- const shown=visibleEvents(state.importedEvents).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
- importedEvents.innerHTML=shown.length?shown.map(eventHTML).join(''):'<p class="muted">No visible imported events.</p>';
+ const shown=visibleEvents(state.importedEvents).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ importedEvents.innerHTML=shown.length?shown.map(eventHTML).join(''):'<p class="muted">No visible calendar events.</p>';
  calendarSubscriptions.innerHTML=CALENDARS.map(c=>{const url=state.calendarSubscriptions[c.name]||'';return `<div class="subscription-row"><span class="calendar-dot" style="color:${c.color};background:${c.color}"></span><strong>${esc(c.name)}</strong><input data-calendar-url="${esc(c.name)}" type="url" value="${esc(url)}" placeholder="webcal://..."><a class="button-link ghost open-subscription ${url?'':'hidden'}" data-open-calendar="${esc(c.name)}" href="${esc(url)}">Open</a></div>`}).join('');
  calendarFilters.innerHTML=CALENDARS.map(c=>`<label class="calendar-filter ${state.calendarVisibility[c.name]?'':'off'}" style="--calendar-color:${c.color}"><input data-calendar-visible="${esc(c.name)}" type="checkbox" ${state.calendarVisibility[c.name]?'checked':''}><span class="calendar-dot" style="background:${c.color};color:${c.color}"></span>${esc(c.name)}</label>`).join('');
+ const sync=state.calendarSync||{};
+ const last=sync.lastRefreshedAt?new Date(sync.lastRefreshedAt).toLocaleString('en-CA'):'Never';
+ const errorText=Array.isArray(sync.errors)&&sync.errors.length?` · ${sync.errors.length} calendar${sync.errors.length===1?'':'s'} had an error`:'';
+ if(window.calendarSyncStatus)calendarSyncStatus.textContent=`Last refreshed: ${last}${sync.eventCount!==undefined?` · ${sync.eventCount} synced event${sync.eventCount===1?'':'s'}`:''}${errorText}`;
  document.querySelectorAll('[data-calendar-visible]').forEach(x=>x.onchange=e=>{state.calendarVisibility[e.target.dataset.calendarVisible]=e.target.checked;save();renderCalendar();renderHome()});
  document.querySelectorAll('[data-open-calendar]').forEach(a=>a.onclick=e=>{e.preventDefault();const url=state.calendarSubscriptions[a.dataset.openCalendar];if(url)location.href=url});
 }
@@ -167,7 +171,18 @@ function parseICS(text){
   const s=parse(raw),en=rawEnd?parse(rawEnd):{time:''};return {date:s.date,start:s.time,end:en.time,title:get('SUMMARY')||'Calendar event',note:get('DESCRIPTION')}
  }).filter(e=>e.date)
 }
-saveCalendarSubscriptions.onclick=()=>{document.querySelectorAll('[data-calendar-url]').forEach(x=>state.calendarSubscriptions[x.dataset.calendarUrl]=x.value.trim());save();renderCalendar()};
+saveCalendarSubscriptions.onclick=()=>{document.querySelectorAll('[data-calendar-url]').forEach(x=>state.calendarSubscriptions[x.dataset.calendarUrl]=x.value.trim());save();renderCalendar();calendarSyncStatus.textContent='Calendar links saved. Click Refresh Apple calendars to fetch events.'};
+refreshAppleCalendars.onclick=async()=>{
+ const button=refreshAppleCalendars;button.disabled=true;calendarSyncStatus.textContent='Refreshing published Apple calendars…';
+ try{
+  if(!window.DanielCloud?.status?.().signedIn)throw new Error('Sign in to Supabase before refreshing calendars.');
+  const result=await window.DanielCloud.refreshAppleCalendars();
+  state=load();
+  renderCalendar();renderVisualCalendar();renderHome();
+  const failures=result?.errors?.length?` ${result.errors.length} calendar${result.errors.length===1?'':'s'} could not be refreshed.`:'';
+  calendarSyncStatus.textContent=`Refreshed ${result?.eventCount||0} event${result?.eventCount===1?'':'s'} from ${(result?.refreshedCalendars||[]).length} calendar${(result?.refreshedCalendars||[]).length===1?'':'s'}.${failures}`;
+ }catch(error){console.error(error);calendarSyncStatus.textContent=`Refresh failed: ${error?.message||'Unknown error'}`;}finally{button.disabled=false}
+};
 showAllCalendars.onclick=()=>{CALENDARS.forEach(c=>state.calendarVisibility[c.name]=true);save();renderCalendar();renderHome()};
 clearEvents.onclick=()=>{if(confirm('Clear all imported calendar events?')){state.importedEvents=[];save();renderCalendar();renderHome()}};
 

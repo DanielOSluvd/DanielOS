@@ -167,9 +167,9 @@
       <section id="calendar" class="view">
         <div class="grid two">
           <article class="card">
-            <span class="pill">SAFE STARTER CONNECTION</span>
+            <span class="pill">LIVE APPLE CALENDAR SYNC</span>
             <h2>Apple Calendar bridge</h2>
-            <p>Import Apple Calendar events into Daniel OS using an exported <code>.ics</code> file. Export Daniel OS timeline blocks back to Apple Calendar with one click.</p>
+            <p>Refresh published Apple Calendar feeds through Supabase, or import an exported <code>.ics</code> file manually. Export Daniel OS timeline blocks back to Apple Calendar with one click.</p>
             <label>Import into calendar
               <select id="icsCalendarType">
                 <option>Work Schedule</option><option>Work</option><option>Family</option><option>Personal</option><option>Leisure</option>
@@ -185,9 +185,13 @@
           <article class="card">
             <span class="pill">MULTI-CALENDAR HUB</span>
             <h3>Apple Calendar subscriptions</h3>
-            <p>Save a separate published <code>webcal://</code> or <code>https://</code> link for each Apple calendar. Turn calendars on or off to control which imported events appear in Daniel OS.</p>
+            <p>Save a separate published <code>webcal://</code> or <code>https://</code> link for each Apple calendar. Daniel OS securely fetches these feeds through your Supabase Edge Function.</p>
             <div id="calendarSubscriptions" class="subscription-list"></div>
-            <button id="saveCalendarSubscriptions" class="primary">Save all calendars</button>
+            <div class="calendar-sync-actions">
+              <button id="saveCalendarSubscriptions" class="primary">Save all calendars</button>
+              <button id="refreshAppleCalendars" class="ghost">↻ Refresh Apple calendars</button>
+            </div>
+            <p id="calendarSyncStatus" class="muted" aria-live="polite">Save your published links, then refresh.</p>
           </article>
         </div>
 
@@ -197,13 +201,13 @@
         </article>
 
         <article class="card">
-          <div class="section-head"><div><h3>Imported events</h3><p>Events are stored locally in your browser.</p></div><button id="clearEvents" class="ghost">Clear imported events</button></div>
+          <div class="section-head"><div><h3>Calendar events</h3><p>Manual imports and Apple-synced events are saved to your Supabase account.</p></div><button id="clearEvents" class="ghost">Clear calendar events</button></div>
           <div id="importedEvents" class="event-list"></div>
         </article>
 
         <article class="card callout">
-          <h3>Two-way sync upgrade</h3>
-          <p>A later hosted version can use a secure server-side CalDAV connection. Never place your Apple Account password or app-specific password in front-end website code.</p>
+          <h3>Read-only published feed</h3>
+          <p>This refreshes events from published Apple Calendar links into Daniel OS. Changes made in Daniel OS are not written back to Apple Calendar. Keep published links private because anyone holding a link may be able to read that calendar.</p>
         </article>
       </section>
 

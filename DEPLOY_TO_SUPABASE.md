@@ -30,3 +30,8 @@ Supabase supplies the database and authentication, but this static website still
 - When cloud data already exists, it becomes the source of truth and reloads the app.
 - Subsequent edits are saved locally immediately and synced to Supabase after a short debounce.
 - Export Backup remains available as an additional safety copy.
+
+
+## Deploy Apple Calendar sync
+
+After the main database setup, deploy the Edge Function in `supabase/functions/sync-apple-calendars/index.ts` using the exact name `sync-apple-calendars`. Full instructions are in `APPLE_CALENDAR_SYNC_SETUP.md`.
