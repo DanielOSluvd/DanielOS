@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>Daniel OS</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient a1"></div><div class="ambient a2"></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">D</div>
+        <div><strong>Daniel OS</strong><span>Personal Command Centre</span></div>
+      </div>
+      <nav>
+        <button class="nav active" data-view="home">⌂ <span>Home</span></button>
+        <button class="nav" data-view="daily">◫ <span>Daily Page</span></button>
+        <button class="nav" data-view="visualCalendar">▦ <span>Calendar View</span></button>
+        <button class="nav" data-view="calendar">◷ <span>Apple Calendar</span></button>
+        <button class="nav" data-view="goals">◎ <span>Goals</span></button>
+        <button class="nav" data-view="systems">◇ <span>Life Systems</span></button>
+        <button class="nav" data-view="review">✓ <span>Weekly Review</span></button>
+        <button class="nav" data-view="settings">⚙ <span>Settings</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="status-dot"></span><span id="storageStatus"> Saved on this device</span>
+      </div>
+    </aside>
+
+    <main>
+      <header>
+        <div>
+          <p id="todayLabel" class="eyebrow"></p>
+          <h1 id="pageTitle">Good afternoon, Daniel.</h1>
+        </div>
+        <div class="header-actions">
+          <span id="cloudUser" class="cloud-user hidden"></span>
+          <button id="cloudSignOut" class="ghost hidden">Sign out</button>
+          <button id="todayBtn" class="ghost">Today</button>
+          <button id="installBtn" class="primary hidden">Install App</button>
+        </div>
+      </header>
+
+      <section id="home" class="view active-view">
+        <div class="hero card">
+          <div>
+            <span class="pill">TODAY'S COMMAND</span>
+            <h2>Lead calmly. Finish deliberately.</h2>
+            <p>Protect the morning, create one meaningful store win, be fully present at pickup, and close the day cleanly.</p>
+          </div>
+          <div class="readiness">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="48"/>
+              <circle id="ring" class="ring" cx="60" cy="60" r="48"/>
+            </svg>
+            <div><strong id="readinessScore">78</strong><span>readiness</span></div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <article class="metric"><span>Top priorities</span><strong id="priorityMetric">0/3</strong><small>complete</small></article>
+          <article class="metric"><span>Store focus</span><strong>OTW</strong><small>pace + deployment</small></article>
+          <article class="metric"><span>Family anchor</span><strong>5:00</strong><small>daycare pickup</small></article>
+          <article class="metric"><span>Personal reset</span><strong>20m</strong><small>after bedtime</small></article>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <div class="section-head"><div><h3>Today's Top 3</h3><p>Three outcomes that make today successful.</p></div><span id="top3Badge" class="pill">0 / 3</span></div>
+            <div id="top3List" class="check-list"></div>
+          </article>
+          <article class="card">
+            <div class="section-head"><div><h3>Daily affirmation</h3><p>Reset your internal state.</p></div></div>
+            <blockquote id="affirmation"></blockquote>
+            <button id="newAffirmation" class="ghost">New affirmation</button>
+          </article>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <div class="section-head"><div><h3>Today's timeline</h3><p>Generated from your daily page.</p></div><button class="ghost jump" data-jump="daily">Open day</button></div>
+            <div id="homeTimeline" class="timeline compact"></div>
+          </article>
+          <article class="card">
+            <div class="section-head"><div><h3>Calendar snapshot</h3><p>Events imported into Daniel OS.</p></div><button class="ghost jump" data-jump="calendar">Connect</button></div>
+            <div id="calendarSnapshot" class="event-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="daily" class="view">
+        <div class="section-toolbar card">
+          <div><span class="pill">DAILY COMMAND PAGE</span><h2 id="dailyDateTitle"></h2><p>Every date has its own goals, timeline, notes and reflection.</p></div>
+          <input id="datePicker" type="date" />
+        </div>
+
+        <div class="grid daily-grid">
+          <div class="stack">
+            <article class="card">
+              <h3>Daily setup</h3>
+              <label>Theme of the day<input id="dayTheme" type="text" /></label>
+              <label>Most important outcome<textarea id="dayOutcome" rows="3"></textarea></label>
+              <label>Energy <span id="energyValue"></span><input id="dayEnergy" type="range" min="1" max="10" /></label>
+            </article>
+
+            <article class="card goal-card daily-goal-card">
+              <div class="section-head"><div><h3>Daily goals</h3><p>Focused actions for this specific day.</p></div><button id="addGoal" class="ghost">+ Add</button></div>
+              <div id="goalList" class="check-list"></div>
+            </article>
+
+            <article class="card goal-card weekly-goal-card">
+              <div class="section-head"><div><span class="goal-kicker">THIS WEEK</span><h3>Weekly goals</h3><p id="weeklyGoalPeriod"></p></div><div class="goal-actions"><span id="weeklyProgress" class="pill">0 / 0</span><button id="addWeeklyGoal" class="ghost">+ Add</button></div></div>
+              <div id="weeklyGoalList" class="check-list"></div>
+            </article>
+
+            <article class="card goal-card monthly-goal-card">
+              <div class="section-head"><div><span class="goal-kicker">THIS MONTH</span><h3>Monthly goals</h3><p id="monthlyGoalPeriod"></p></div><div class="goal-actions"><span id="monthlyProgress" class="pill">0 / 0</span><button id="addMonthlyGoal" class="ghost">+ Add</button></div></div>
+              <div id="monthlyGoalList" class="check-list"></div>
+            </article>
+
+            <article class="card">
+              <h3>Notes</h3>
+              <label>Work<textarea id="workNotes" rows="4"></textarea></label>
+              <label>Family & life<textarea id="familyNotes" rows="4"></textarea></label>
+              <label>Evening reflection<textarea id="reflectionNotes" rows="4"></textarea></label>
+            </article>
+          </div>
+
+          <article class="card">
+            <div class="section-head"><div><h3>Timeline</h3><p>A flexible plan, not a prison.</p></div><button id="addTimeline" class="ghost">+ Add block</button></div>
+            <div id="timelineList" class="timeline"></div>
+          </article>
+        </div>
+      </section>
+
+
+      <section id="visualCalendar" class="view">
+        <div class="section-toolbar card calendar-view-hero">
+          <div><span class="pill">VISUAL CALENDAR</span><h2 id="visualCalendarTitle">Calendar</h2><p>See all visible Apple Calendar events in daily, weekly, or monthly layouts.</p></div>
+          <div class="calendar-view-actions">
+            <button id="calendarPrev" class="ghost">←</button>
+            <button id="calendarToday" class="ghost">Today</button>
+            <button id="calendarNext" class="ghost">→</button>
+          </div>
+        </div>
+        <article class="card visual-calendar-toolbar">
+          <div class="view-switcher" role="group" aria-label="Calendar view">
+            <button class="calendar-mode active" data-calendar-mode="day">Day</button>
+            <button class="calendar-mode" data-calendar-mode="week">Week</button>
+            <button class="calendar-mode" data-calendar-mode="month">Month</button>
+          </div>
+          <label>Go to date<input id="visualCalendarDate" type="date" /></label>
+          <label>Display density<select id="calendarDensity"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
+          <label class="calendar-weekend-toggle"><input id="showWeekends" type="checkbox" checked /> Show weekends</label>
+        </article>
+        <article class="card calendar-category-panel">
+          <div class="section-head"><div><h3>Visible calendars</h3><p>These use the same visibility settings as your Apple Calendar hub.</p></div><button id="visualShowAll" class="ghost">Show all</button></div>
+          <div id="visualCalendarFilters" class="calendar-filters"></div>
+        </article>
+        <div id="visualCalendarCanvas" class="visual-calendar-canvas"></div>
+      </section>
+
+      <section id="calendar" class="view">
+        <div class="grid two">
+          <article class="card">
+            <span class="pill">SAFE STARTER CONNECTION</span>
+            <h2>Apple Calendar bridge</h2>
+            <p>Import Apple Calendar events into Daniel OS using an exported <code>.ics</code> file. Export Daniel OS timeline blocks back to Apple Calendar with one click.</p>
+            <label>Import into calendar
+              <select id="icsCalendarType">
+                <option>Work Schedule</option><option>Work</option><option>Family</option><option>Personal</option><option>Leisure</option>
+                <option>Gym</option><option>Self Care</option><option>OTHER</option>
+              </select>
+            </label>
+            <label class="file-drop">Import an .ics calendar file
+              <input id="icsImport" type="file" accept=".ics,text/calendar" multiple />
+            </label>
+            <p id="importStatus" class="muted">No calendar imported yet.</p>
+          </article>
+
+          <article class="card">
+            <span class="pill">MULTI-CALENDAR HUB</span>
+            <h3>Apple Calendar subscriptions</h3>
+            <p>Save a separate published <code>webcal://</code> or <code>https://</code> link for each Apple calendar. Turn calendars on or off to control which imported events appear in Daniel OS.</p>
+            <div id="calendarSubscriptions" class="subscription-list"></div>
+            <button id="saveCalendarSubscriptions" class="primary">Save all calendars</button>
+          </article>
+        </div>
+
+        <article class="card calendar-filter-card">
+          <div class="section-head"><div><h3>Calendar visibility</h3><p>Use these filters across the dashboard and imported event list.</p></div><button id="showAllCalendars" class="ghost">Show all</button></div>
+          <div id="calendarFilters" class="calendar-filters"></div>
+        </article>
+
+        <article class="card">
+          <div class="section-head"><div><h3>Imported events</h3><p>Events are stored locally in your browser.</p></div><button id="clearEvents" class="ghost">Clear imported events</button></div>
+          <div id="importedEvents" class="event-list"></div>
+        </article>
+
+        <article class="card callout">
+          <h3>Two-way sync upgrade</h3>
+          <p>A later hosted version can use a secure server-side CalDAV connection. Never place your Apple Account password or app-specific password in front-end website code.</p>
+        </article>
+      </section>
+
+      <section id="goals" class="view">
+        <div class="section-toolbar card goals-hero">
+          <div><span class="pill">MASTER GOAL CENTRE</span><h2>All goals, one clear path</h2><p>See every major goal, milestone and timeline across your life systems.</p></div>
+          <button id="addMasterGoal" class="primary">+ New goal</button>
+        </div>
+        <article class="card goal-toolbar">
+          <label>System<select id="goalSystemFilter"></select></label>
+          <label>Status<select id="goalStatusFilter"><option value="all">All statuses</option><option value="active">Active</option><option value="paused">Paused</option><option value="complete">Complete</option></select></label>
+          <label>Sort by<select id="goalSort"><option value="target">Target date</option><option value="progress">Progress</option><option value="system">System</option><option value="created">Newest</option></select></label>
+        </article>
+        <div id="goalSummary" class="metrics goal-metrics"></div>
+        <div id="masterGoalList" class="master-goal-list"></div>
+      </section>
+
+      <section id="systems" class="view">
+        <div class="section-toolbar card systems-hero"><div><span class="pill">LIFE SYSTEMS</span><h2>Build each area deliberately</h2><p>Open a system to manage its vision, goals, stepping stones and timelines.</p></div></div>
+        <div id="systemGrid" class="system-grid"></div>
+      </section>
+
+      <section id="systemDetail" class="view">
+        <button id="backToSystems" class="ghost back-button">← Back to Life Systems</button>
+        <div id="systemDetailHero" class="card system-detail-hero"></div>
+        <div class="grid two">
+          <article class="card"><div class="section-head"><div><h3>System vision</h3><p>What success in this area looks like.</p></div></div><textarea id="systemVision" rows="6"></textarea></article>
+          <article class="card"><div class="section-head"><div><h3>System timeline</h3><p>Important dates and milestones across this area.</p></div><button id="addSystemTimeline" class="ghost">+ Add</button></div><div id="systemTimelineList" class="timeline"></div></article>
+        </div>
+        <article class="card"><div class="section-head"><div><h3>Goals in this system</h3><p>Big outcomes broken into achievable stepping stones.</p></div><button id="addSystemGoal" class="primary">+ New goal</button></div><div id="systemGoalList" class="master-goal-list"></div></article>
+      </section>
+
+      <section id="review" class="view">
+        <article class="card">
+          <span class="pill">WEEKLY RESET</span><h2>Close the loop</h2><p>Turn experience into better decisions for next week.</p>
+          <div class="grid two">
+            <label>Wins<textarea id="reviewWins" rows="6"></textarea></label>
+            <label>Friction<textarea id="reviewFriction" rows="6"></textarea></label>
+            <label>Lessons<textarea id="reviewLessons" rows="6"></textarea></label>
+            <label>Next week's focus<textarea id="reviewFocus" rows="6"></textarea></label>
+          </div>
+          <button id="saveReview" class="primary">Save weekly review</button>
+        </article>
+      </section>
+
+      <section id="settings" class="view">
+        <article class="card">
+          <h2>Settings & backup</h2>
+          <p>Your starter version saves data in this browser. Export a backup regularly, especially before clearing browser data.</p>
+          <div class="button-row">
+            <button id="exportBackup" class="primary">Export backup</button>
+            <label class="button-link ghost">Import backup<input id="importBackup" type="file" accept=".json" hidden /></label>
+            <button id="resetApp" class="danger">Reset all data</button>
+          </div>
+        </article>
+        <article class="card">
+          <h3>Make it available daily</h3>
+          <ol>
+            <li>Host this folder on Netlify, Cloudflare Pages or GitHub Pages.</li>
+            <li>Open the hosted link on your iPhone.</li>
+            <li>Use Share → Add to Home Screen.</li>
+            <li>Open Daniel OS each morning; it automatically uses the current date.</li>
+          </ol>
+        </article>
+      </section>
+    </main>
+  </div>
+<div id="authOverlay" class="auth-overlay hidden" aria-live="polite">
+    <section class="auth-card card">
+      <span class="pill">DANIEL OS CLOUD</span>
+      <h2>Sign in to your personal operating system</h2>
+      <p>Your goals, calendars, daily pages and life systems will sync securely between your devices.</p>
+      <label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="6"></label>
+      <p id="authMessage" class="muted"></p>
+      <div class="button-row">
+        <button id="authSignIn" class="primary">Sign in</button>
+        <button id="authSignUp" class="ghost">Create account</button>
+        <button id="authLocal" class="ghost">Use device only</button>
+      </div>
+    </section>
+  </div>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.55.0/dist/umd/supabase.min.js"></script>
+  <script src="supabase-sync.js"></script>
+  <script src="app.js"></script>
+
+  <dialog id="goalDialog" class="goal-dialog">
+    <form method="dialog" id="goalForm">
+      <div class="section-head"><div><span class="pill">GOAL BUILDER</span><h2 id="goalDialogTitle">Create a goal</h2></div><button value="cancel" class="ghost">✕</button></div>
+      <input id="goalEditId" type="hidden">
+      <div class="grid two">
+        <label>Goal title<input id="goalTitleInput" required type="text"></label>
+        <label>Life system<select id="goalSystemInput"></select></label>
+        <label>Target date<input id="goalTargetInput" type="date"></label>
+        <label>Status<select id="goalStatusInput"><option value="active">Active</option><option value="paused">Paused</option><option value="complete">Complete</option></select></label>
+      </div>
+      <label>Why this matters<textarea id="goalWhyInput" rows="3"></textarea></label>
+      <label>Success looks like<textarea id="goalSuccessInput" rows="3"></textarea></label>
+      <div class="dialog-actions"><button value="cancel" class="ghost">Cancel</button><button id="saveGoalButton" value="default" class="primary">Save goal</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
