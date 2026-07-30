@@ -88,7 +88,7 @@ document.querySelectorAll('.jump').forEach(b=>b.addEventListener('click',()=>sho
 function show(id){
  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active-view',v.id===id));
  document.querySelectorAll('.nav').forEach(v=>v.classList.toggle('active',v.dataset.view===id));
- document.getElementById('pageTitle').textContent={home:'Good afternoon, Daniel.',daily:'Daily Command Page',calendar:'Apple Calendar Bridge',goals:'Goals',systems:'Life Systems',systemDetail:systemMeta(activeSystemId).name,review:'Weekly Review',settings:'Settings'}[id];
+ document.getElementById('pageTitle').textContent={home:'Good afternoon, Daniel.',daily:'Daily Command Page',calendar:'Apple Calendar Bridge',visualCalendar:'Calendar View',goals:'Goals',systems:'Life Systems',systemDetail:systemMeta(activeSystemId).name,review:'Weekly Review',settings:'Settings'}[id];
  if(id==='daily')renderDay(); if(id==='visualCalendar')renderVisualCalendar(); if(id==='calendar')renderCalendar(); if(id==='goals')renderGoals(); if(id==='systems')renderSystems(); if(id==='systemDetail')renderSystemDetail();
 }
 
@@ -138,18 +138,64 @@ function eventHTML(e){const cal=e.calendar||'OTHER',meta=calendarMeta(cal);retur
 function dateAdd(key,days){const d=new Date(key+'T12:00:00');d.setDate(d.getDate()+days);return localDateKey(d)}
 function mondayOf(key){const d=new Date(key+'T12:00:00'),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return localDateKey(d)}
 function monthStart(key){return key.slice(0,7)+'-01'}
-function eventsForDate(key){return state.importedEvents.filter(e=>e.date===key&&state.calendarVisibility[e.calendar||'OTHER']!==false).sort((a,b)=>a.start.localeCompare(b.start))}
-function renderVisualFilters(){visualCalendarFilters.innerHTML=CALENDARS.map(c=>`<label class="calendar-filter ${state.calendarVisibility[c.name]?'':'off'}" style="--calendar-color:${c.color}"><input data-visual-calendar="${esc(c.name)}" type="checkbox" ${state.calendarVisibility[c.name]?'checked':''}><span class="calendar-dot" style="background:${c.color};color:${c.color}"></span>${esc(c.name)}</label>`).join('');document.querySelectorAll('[data-visual-calendar]').forEach(x=>x.onchange=()=>{state.calendarVisibility[x.dataset.visualCalendar]=x.checked;save();renderVisualCalendar();renderCalendar();renderHome()})}
-function visualEvent(e,month=false){const m=calendarMeta(e.calendar||'OTHER');return `<div class="${month?'month-event':'calendar-event-block'}" style="--event-color:${m.color}" title="${esc(e.title)}"><strong>${month?formatTime(e.start)+' ':''}${esc(e.title)}</strong>${month?'':`<small>${formatTime(e.start)}${e.end?' – '+formatTime(e.end):''} · ${esc(e.calendar||'OTHER')}</small>`}</div>`}
-function renderVisualCalendar(){
- visualCalendarDateInput.value=visualCalendarDate;renderVisualFilters();
- document.querySelectorAll('.calendar-mode').forEach(b=>b.classList.toggle('active',b.dataset.calendarMode===visualCalendarMode));
- visualCalendarCanvas.classList.toggle('compact',calendarDensity.value==='compact');
- if(visualCalendarMode==='day')renderCalendarDay();else if(visualCalendarMode==='week')renderCalendarWeek();else renderCalendarMonth();
+function safeTime(value,fallback='00:00'){return /^\d{1,2}:\d{2}/.test(value||'')?(value||'').slice(0,5):fallback}
+function minutesFromTime(value){const [h,m]=safeTime(value).split(':').map(Number);return h*60+m}
+function isAllDayEvent(e){return e.allDay===true||(!e.start&& !e.end)}
+function eventDurationMinutes(e){if(isAllDayEvent(e))return 0;const start=minutesFromTime(e.start),end=e.end?minutesFromTime(e.end):start+60;return Math.max(30,end>start?end-start:60)}
+function eventsForDate(key){return state.importedEvents.filter(e=>e.date===key&&state.calendarVisibility[e.calendar||'OTHER']!==false).sort((a,b)=>{if(isAllDayEvent(a)!==isAllDayEvent(b))return isAllDayEvent(a)?-1:1;return safeTime(a.start).localeCompare(safeTime(b.start))})}
+function renderVisualFilters(){
+ const el=document.getElementById('visualCalendarFilters');if(!el)return;
+ el.innerHTML=CALENDARS.map(c=>`<label class="calendar-filter ${state.calendarVisibility[c.name]?'':'off'}" style="--calendar-color:${c.color}"><input data-visual-calendar="${esc(c.name)}" type="checkbox" ${state.calendarVisibility[c.name]?'checked':''}><span class="calendar-dot" style="background:${c.color};color:${c.color}"></span>${esc(c.name)}</label>`).join('');
+ el.querySelectorAll('[data-visual-calendar]').forEach(x=>x.onchange=()=>{state.calendarVisibility[x.dataset.visualCalendar]=x.checked;save();renderVisualCalendar();renderCalendar();renderHome()})
 }
-function renderCalendarDay(){const ev=eventsForDate(visualCalendarDate);visualCalendarTitle.textContent=displayDate(visualCalendarDate);let html='<div class="calendar-day-layout">';for(let h=5;h<=23;h++){const time=`${String(h).padStart(2,'0')}:00`;html+=`<div class="day-hour-label">${formatTime(time)}</div><div class="day-hour-cell">${ev.filter(e=>parseInt(e.start||'0')===h).map(e=>visualEvent(e)).join('')}</div>`}html+='</div>';visualCalendarCanvas.innerHTML=html}
-function renderCalendarWeek(){let start=mondayOf(visualCalendarDate),days=Array.from({length:7},(_,i)=>dateAdd(start,i));if(!showWeekends.checked)days=days.slice(0,5);visualCalendarTitle.textContent=`${displayDate(days[0]).replace(/^\w+, /,'')} – ${displayDate(days[days.length-1]).replace(/^\w+, /,'')}`;let html=`<div class="week-calendar" style="--week-cols:${days.length}"><div class="week-corner"></div>`;days.forEach(d=>html+=`<div class="week-head ${d===localDateKey(new Date())?'today':''}"><strong>${new Date(d+'T12:00:00').toLocaleDateString('en-CA',{weekday:'short'})}</strong><br><small>${new Date(d+'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric'})}</small></div>`);for(let h=5;h<=23;h++){html+=`<div class="week-time">${formatTime(`${String(h).padStart(2,'0')}:00`)}</div>`;days.forEach(d=>html+=`<div class="week-cell">${eventsForDate(d).filter(e=>parseInt(e.start||'0')===h).map(e=>visualEvent(e)).join('')}</div>`)}html+='</div>';visualCalendarCanvas.innerHTML=html}
-function renderCalendarMonth(){const first=new Date(monthStart(visualCalendarDate)+'T12:00:00'),year=first.getFullYear(),month=first.getMonth();visualCalendarTitle.textContent=first.toLocaleDateString('en-CA',{month:'long',year:'numeric'});let start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));let days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return localDateKey(d)});let cols=7,weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];if(!showWeekends.checked){days=days.filter(d=>{const x=new Date(d+'T12:00:00').getDay();return x!==0&&x!==6});cols=5;weekdays=weekdays.slice(0,5)}let html=`<div class="month-calendar" style="--month-cols:${cols}">`;weekdays.forEach(w=>html+=`<div class="month-weekday">${w}</div>`);days.forEach(d=>{const dt=new Date(d+'T12:00:00'),ev=eventsForDate(d);html+=`<div class="month-day ${dt.getMonth()!==month?'outside':''} ${d===localDateKey(new Date())?'today':''}"><div class="month-number"><span>${dt.getDate()}</span><small>${ev.length||''}</small></div>${ev.slice(0,4).map(e=>visualEvent(e,true)).join('')}${ev.length>4?`<small>+${ev.length-4} more</small>`:''}</div>`});html+='</div>';visualCalendarCanvas.innerHTML=html}
+function calendarEventMarkup(e,{compact=false,positioned=false}={}){
+ const meta=calendarMeta(e.calendar||'OTHER');
+ const time=isAllDayEvent(e)?'All day':`${formatTime(safeTime(e.start))}${e.end?` – ${formatTime(safeTime(e.end))}`:''}`;
+ const style=positioned?`--event-color:${meta.color};--event-top:${minutesFromTime(e.start)-300};--event-height:${eventDurationMinutes(e)}`:`--event-color:${meta.color}`;
+ return `<button class="visual-event ${compact?'compact-event':''} ${positioned?'positioned-event':''}" style="${style}" data-event-date="${esc(e.date)}" title="${esc(`${e.title} · ${time} · ${e.calendar||'OTHER'}`)}"><span class="visual-event-title">${esc(e.title||'Untitled event')}</span><span class="visual-event-meta">${esc(time)}${compact?'':` · ${esc(e.calendar||'OTHER')}`}</span></button>`
+}
+function allDayRow(days){
+ const rows=days.map(d=>eventsForDate(d).filter(isAllDayEvent));
+ if(!rows.some(x=>x.length))return '';
+ return `<div class="all-day-grid" style="--calendar-cols:${days.length}"><div class="all-day-label">All day</div>${rows.map(events=>`<div class="all-day-cell">${events.map(e=>calendarEventMarkup(e,{compact:true})).join('')}</div>`).join('')}</div>`
+}
+function renderVisualCalendar(){
+ const dateInput=document.getElementById('visualCalendarDate'),canvas=document.getElementById('visualCalendarCanvas'),density=document.getElementById('calendarDensity');
+ if(!dateInput||!canvas)return;
+ dateInput.value=visualCalendarDate;renderVisualFilters();
+ document.querySelectorAll('.calendar-mode').forEach(b=>b.classList.toggle('active',b.dataset.calendarMode===visualCalendarMode));
+ canvas.classList.toggle('compact',density?.value==='compact');
+ if(visualCalendarMode==='day')renderCalendarDay();else if(visualCalendarMode==='week')renderCalendarWeek();else renderCalendarMonth();
+ wireVisualCalendarEvents();
+}
+function renderCalendarDay(){
+ const canvas=document.getElementById('visualCalendarCanvas'),title=document.getElementById('visualCalendarTitle');
+ const events=eventsForDate(visualCalendarDate),allDay=events.filter(isAllDayEvent),timed=events.filter(e=>!isAllDayEvent(e));
+ title.textContent=displayDate(visualCalendarDate);
+ const hours=Array.from({length:19},(_,i)=>i+5);
+ canvas.innerHTML=`<div class="calendar-surface day-surface">${allDay.length?`<div class="single-all-day"><strong>All day</strong><div>${allDay.map(e=>calendarEventMarkup(e,{compact:true})).join('')}</div></div>`:''}<div class="day-timeline"><div class="time-rail">${hours.map(h=>`<div>${formatTime(`${String(h).padStart(2,'0')}:00`)}</div>`).join('')}</div><div class="day-track">${hours.map(()=>'<div class="hour-line"></div>').join('')}${timed.map(e=>calendarEventMarkup(e,{positioned:true})).join('')}${!events.length?'<div class="calendar-empty-state"><strong>No events today</strong><span>Try another date or refresh Apple Calendar.</span></div>':''}</div></div></div>`;
+ requestAnimationFrame(()=>{const surface=canvas.querySelector('.day-surface');if(surface&&timed.length){const first=Math.max(0,minutesFromTime(timed[0].start)-360);surface.scrollTop=first}})
+}
+function renderCalendarWeek(){
+ const canvas=document.getElementById('visualCalendarCanvas'),title=document.getElementById('visualCalendarTitle'),weekends=document.getElementById('showWeekends');
+ let start=mondayOf(visualCalendarDate),days=Array.from({length:7},(_,i)=>dateAdd(start,i));if(!weekends?.checked)days=days.slice(0,5);
+ title.textContent=`${new Date(days[0]+'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric'})} – ${new Date(days.at(-1)+'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}`;
+ const timedByDay=days.map(d=>eventsForDate(d).filter(e=>!isAllDayEvent(e)));
+ const hours=Array.from({length:19},(_,i)=>i+5);
+ canvas.innerHTML=`<div class="calendar-surface week-surface"><div class="week-header-grid" style="--calendar-cols:${days.length}"><div></div>${days.map(d=>{const dt=new Date(d+'T12:00:00');return `<button class="week-date ${d===localDateKey(new Date())?'today':''}" data-open-day="${d}"><span>${dt.toLocaleDateString('en-CA',{weekday:'short'})}</span><strong>${dt.getDate()}</strong></button>`}).join('')}</div>${allDayRow(days)}<div class="week-timeline" style="--calendar-cols:${days.length}"><div class="week-time-rail">${hours.map(h=>`<div>${formatTime(`${String(h).padStart(2,'0')}:00`)}</div>`).join('')}</div>${days.map((d,i)=>`<div class="week-day-track ${d===localDateKey(new Date())?'today-track':''}">${hours.map(()=>'<div class="hour-line"></div>').join('')}${timedByDay[i].map(e=>calendarEventMarkup(e,{positioned:true,compact:true})).join('')}</div>`).join('')}</div></div>`;
+}
+function renderCalendarMonth(){
+ const canvas=document.getElementById('visualCalendarCanvas'),title=document.getElementById('visualCalendarTitle'),weekends=document.getElementById('showWeekends');
+ const first=new Date(monthStart(visualCalendarDate)+'T12:00:00'),month=first.getMonth();title.textContent=first.toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+ let start=new Date(first);start.setDate(first.getDate()-((first.getDay()+6)%7));let days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return localDateKey(d)});let weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+ if(!weekends?.checked){days=days.filter(d=>{const x=new Date(d+'T12:00:00').getDay();return x!==0&&x!==6});weekdays=weekdays.slice(0,5)}
+ canvas.innerHTML=`<div class="calendar-surface month-surface"><div class="month-calendar-modern" style="--calendar-cols:${weekdays.length}">${weekdays.map(w=>`<div class="month-weekday-modern">${w}</div>`).join('')}${days.map(d=>{const dt=new Date(d+'T12:00:00'),events=eventsForDate(d);return `<button class="month-day-modern ${dt.getMonth()!==month?'outside':''} ${d===localDateKey(new Date())?'today':''}" data-open-day="${d}"><span class="month-day-number">${dt.getDate()}</span><div class="month-events">${events.slice(0,3).map(e=>calendarEventMarkup(e,{compact:true})).join('')}${events.length>3?`<span class="more-events">+${events.length-3} more</span>`:''}</div></button>`}).join('')}</div></div>`;
+}
+function wireVisualCalendarEvents(){
+ const canvas=document.getElementById('visualCalendarCanvas');if(!canvas)return;
+ canvas.querySelectorAll('[data-open-day]').forEach(el=>el.onclick=e=>{e.stopPropagation();visualCalendarDate=el.dataset.openDay;visualCalendarMode='day';renderVisualCalendar()});
+ canvas.querySelectorAll('[data-event-date]').forEach(el=>el.onclick=e=>{e.stopPropagation();visualCalendarDate=el.dataset.eventDate;visualCalendarMode='day';renderVisualCalendar()});
+}
 
 function renderCalendar(){
  const shown=visibleEvents(state.importedEvents).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
@@ -265,11 +311,13 @@ installBtn.onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await de
 
 document.querySelectorAll('.calendar-mode').forEach(b=>b.onclick=()=>{visualCalendarMode=b.dataset.calendarMode;renderVisualCalendar()});
 const visualCalendarDateInput=document.getElementById('visualCalendarDate');
-visualCalendarDateInput.onchange=e=>{visualCalendarDate=e.target.value;renderVisualCalendar()};
-calendarToday.onclick=()=>{visualCalendarDate=localDateKey(new Date());renderVisualCalendar()};
-calendarPrev.onclick=()=>{visualCalendarDate=visualCalendarMode==='day'?dateAdd(visualCalendarDate,-1):visualCalendarMode==='week'?dateAdd(visualCalendarDate,-7):dateAdd(monthStart(visualCalendarDate),-1);renderVisualCalendar()};
-calendarNext.onclick=()=>{if(visualCalendarMode==='day')visualCalendarDate=dateAdd(visualCalendarDate,1);else if(visualCalendarMode==='week')visualCalendarDate=dateAdd(visualCalendarDate,7);else{const d=new Date(monthStart(visualCalendarDate)+'T12:00:00');d.setMonth(d.getMonth()+1);visualCalendarDate=localDateKey(d)}renderVisualCalendar()};
-calendarDensity.onchange=renderVisualCalendar;showWeekends.onchange=renderVisualCalendar;visualShowAll.onclick=()=>{CALENDARS.forEach(c=>state.calendarVisibility[c.name]=true);save();renderVisualCalendar();renderCalendar();renderHome()};
+if(visualCalendarDateInput)visualCalendarDateInput.onchange=e=>{if(e.target.value){visualCalendarDate=e.target.value;renderVisualCalendar()}};
+const calendarTodayEl=document.getElementById('calendarToday'),calendarPrevEl=document.getElementById('calendarPrev'),calendarNextEl=document.getElementById('calendarNext');
+if(calendarTodayEl)calendarTodayEl.onclick=()=>{visualCalendarDate=localDateKey(new Date());renderVisualCalendar()};
+if(calendarPrevEl)calendarPrevEl.onclick=()=>{if(visualCalendarMode==='day')visualCalendarDate=dateAdd(visualCalendarDate,-1);else if(visualCalendarMode==='week')visualCalendarDate=dateAdd(visualCalendarDate,-7);else{const d=new Date(monthStart(visualCalendarDate)+'T12:00:00');d.setMonth(d.getMonth()-1);visualCalendarDate=localDateKey(d)}renderVisualCalendar()};
+if(calendarNextEl)calendarNextEl.onclick=()=>{if(visualCalendarMode==='day')visualCalendarDate=dateAdd(visualCalendarDate,1);else if(visualCalendarMode==='week')visualCalendarDate=dateAdd(visualCalendarDate,7);else{const d=new Date(monthStart(visualCalendarDate)+'T12:00:00');d.setMonth(d.getMonth()+1);visualCalendarDate=localDateKey(d)}renderVisualCalendar()};
+const densityEl=document.getElementById('calendarDensity'),weekendsEl=document.getElementById('showWeekends'),showAllEl=document.getElementById('visualShowAll');
+if(densityEl)densityEl.onchange=renderVisualCalendar;if(weekendsEl)weekendsEl.onchange=renderVisualCalendar;if(showAllEl)showAllEl.onclick=()=>{CALENDARS.forEach(c=>state.calendarVisibility[c.name]=true);save();renderVisualCalendar();renderCalendar();renderHome()};
 
 document.getElementById('todayLabel').textContent=displayDate(selectedDate);
 populateGoalSelectors();renderHome();renderSystems();
