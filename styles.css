@@ -48,3 +48,8 @@ select{width:100%;margin-top:7px;background:rgba(4,8,18,.38);border:1px solid va
 .auth-overlay.hidden{display:none}.auth-card{width:min(480px,100%)}.auth-card h2{margin-top:14px}.auth-card label{display:block;margin-top:14px}.auth-card input{width:100%;margin-top:7px}.cloud-user{font-size:.85rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .calendar-sync-actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}.calendar-sync-actions button:disabled{opacity:.6;cursor:wait}
+
+.calendar-sync-window{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0 8px}
+.calendar-sync-window label{display:grid;gap:7px;font-weight:700}
+.calendar-sync-window label>div{display:flex;align-items:center;gap:8px}
+.calendar-sync-window input{width:110px}
