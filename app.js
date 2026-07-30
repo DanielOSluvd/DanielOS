@@ -100,10 +100,32 @@ function renderTop3(){
  state.top3.forEach((x,i)=>{const row=document.createElement('label');row.className='check-item'+(x.done?' done':'');row.innerHTML=`<input type="checkbox" ${x.done?'checked':''}><span>${esc(x.text)}</span>`;row.querySelector('input').onchange=e=>{x.done=e.target.checked;save();renderTop3()};el.append(row)});
  const c=state.top3.filter(x=>x.done).length;document.getElementById('top3Badge').textContent=`${c} / 3`;document.getElementById('priorityMetric').textContent=`${c}/3`;
 }
-function timelineHTML(items){return items.map(x=>`<div class="timeline-item"><div class="timeline-time">${formatTime(x.time)}</div><div class="timeline-track"></div><div class="timeline-content"><strong>${esc(x.title)}</strong><small>${esc(x.note||'')}</small></div></div>`).join('')}
+function normalizeDailyCalendarEvent(e,index=0){
+ const date=String(e.date||e.startDate||e.start||'').match(/^\d{4}-\d{2}-\d{2}/)?.[0]||'';
+ const getTime=value=>String(value||'').match(/(?:T|^)(\d{1,2}):(\d{2})/)?.slice(1,3).join(':')||'';
+ const start=getTime(e.startTime||e.start),end=getTime(e.endTime||e.end);
+ return {id:e.uid||e.id||`calendar-${index}`,date,time:start||'00:00',end,title:e.title||e.summary||'Untitled event',note:e.note||e.description||'',location:e.location||'',calendar:e.calendar||e.calendarName||'OTHER',allDay:e.allDay===true||(!start&&!end),source:'calendar'};
+}
+function combinedDailyTimeline(key){
+ const planned=day().timeline.map((x,index)=>({...x,id:`planned-${index}`,source:'planned',allDay:false,calendar:''}));
+ const calendar=(Array.isArray(state.importedEvents)?state.importedEvents:[]).map(normalizeDailyCalendarEvent).filter(e=>e.date===key);
+ return [...planned,...calendar].sort((a,b)=>{
+  if(a.allDay!==b.allDay)return a.allDay?-1:1;
+  const timeCompare=(a.time||'00:00').localeCompare(b.time||'00:00');
+  if(timeCompare)return timeCompare;
+  return (a.title||'').localeCompare(b.title||'');
+ });
+}
+function timelineHTML(items){return items.map(x=>{
+ const isCalendar=x.source==='calendar',meta=isCalendar?calendarMeta(x.calendar||'OTHER'):null;
+ const shownTime=x.allDay?'All day':formatTime(x.time);
+ const endText=isCalendar&&x.end?` – ${formatTime(x.end)}`:'';
+ const details=[x.note,x.location].filter(Boolean).join(' · ');
+ return `<div class="timeline-item ${isCalendar?'calendar-timeline-item':'planned-timeline-item'}" ${isCalendar?`style="--timeline-calendar-color:${meta.color}"`:''}><div class="timeline-time">${esc(shownTime)}${endText}</div><div class="timeline-track"></div><div class="timeline-content"><strong>${esc(x.title)}</strong>${isCalendar?`<span class="timeline-calendar-badge">${esc(x.calendar||'OTHER')}</span>`:''}${details?`<small>${esc(details)}</small>`:''}</div></div>`
+ }).join('')}
 function renderHome(){
  renderTop3();document.getElementById('affirmation').textContent=affirmations[ai];
- const d=day();document.getElementById('homeTimeline').innerHTML=timelineHTML(d.timeline.slice(0,5));
+ const merged=combinedDailyTimeline(selectedDate);document.getElementById('homeTimeline').innerHTML=timelineHTML(merged.slice(0,5));
  const events=currentEvents();document.getElementById('calendarSnapshot').innerHTML=events.length?events.slice(0,5).map(eventHTML).join(''):'<p class="muted">No imported events for today.</p>';
 }
 function renderDay(){
@@ -116,7 +138,7 @@ function renderDay(){
  renderPeriodGoals('monthlyGoalList',monthlyGoals(),'monthlyProgress');
  document.getElementById('weeklyGoalPeriod').textContent=weekLabel(selectedDate);
  document.getElementById('monthlyGoalPeriod').textContent=monthLabel(monthKey(selectedDate));
- document.getElementById('timelineList').innerHTML=timelineHTML(d.timeline);
+ document.getElementById('timelineList').innerHTML=timelineHTML(combinedDailyTimeline(selectedDate));
 }
 function renderPeriodGoals(listId,items,progressId){
  const list=document.getElementById(listId);list.innerHTML='';
