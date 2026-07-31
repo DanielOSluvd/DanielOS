@@ -313,8 +313,18 @@ function saveGoalFromDialog(){
  Object.assign(g,{title,system:el.system.value||SYSTEMS[0].id,target:el.target.value||'',status:el.status.value||'active',why:el.why.value.trim(),success:el.success.value.trim()});
  save();if(el.dialog.open)el.dialog.close();renderGoals();renderSystems();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail();return true;
 }
-const goalFormEl=document.getElementById('goalForm');
-if(goalFormEl)goalFormEl.addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();saveGoalFromDialog()});
+function initializeGoalForm(){
+ const goalFormEl=document.getElementById('goalForm');
+ if(!goalFormEl||goalFormEl.dataset.goalHandlerReady==='true')return;
+ goalFormEl.dataset.goalHandlerReady='true';
+ goalFormEl.addEventListener('submit',e=>{
+  if(e.submitter?.value==='cancel')return;
+  e.preventDefault();
+  saveGoalFromDialog();
+ });
+}
+initializeGoalForm();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initializeGoalForm,{once:true});
 function goalCardHTML(g){
  const s=systemMeta(g.system),p=goalProgress(g),remaining=daysToTarget(g.target),milestones=g.milestones||[],timeline=g.timeline||[];
  const milestoneHTML=milestones.length?milestones.map(m=>`<label class="check-item"><input type="checkbox" data-master-milestone="${g.id}" data-mid="${m.id}" ${m.done?'checked':''}><span>${esc(m.text)}</span></label>`).join(''):'<p class="muted">No stepping stones yet.</p>';
