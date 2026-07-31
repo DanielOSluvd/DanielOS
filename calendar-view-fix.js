@@ -7,6 +7,7 @@
   ];
   let mode = 'month';
   let focusDate = dateKey(new Date());
+  let selectedMonthDate = focusDate;
   let lastSignature = '';
 
   const $ = (id) => document.getElementById(id);
@@ -84,11 +85,24 @@
   function renderMonth(canvas,title){
     const first=parseKey(monthFirst(focusDate)), month=first.getMonth(), showWeekends=$('showWeekends')?.checked!==false;
     title.textContent=first.toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+    if(!selectedMonthDate || selectedMonthDate.slice(0,7)!==focusDate.slice(0,7)) selectedMonthDate=focusDate;
     const gridStart=new Date(first); gridStart.setDate(first.getDate()-((first.getDay()+6)%7));
     let days=Array.from({length:42},(_,i)=>{const d=new Date(gridStart);d.setDate(gridStart.getDate()+i);return dateKey(d)});
     let labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     if(!showWeekends){days=days.filter(d=>![0,6].includes(parseKey(d).getDay()));labels=labels.slice(0,5)}
-    canvas.innerHTML=`<div class="cv-shell cv-month-shell"><div class="cv-month-grid" style="--cv-cols:${labels.length}">${labels.map(x=>`<div class="cv-weekday">${x}</div>`).join('')}${days.map(d=>{const dt=parseKey(d),events=forDate(d);return `<button type="button" class="cv-month-day ${dt.getMonth()!==month?'outside':''} ${d===dateKey(new Date())?'is-today':''}" data-cv-date="${d}"><span class="cv-date-number">${dt.getDate()}</span><div class="cv-month-events">${events.slice(0,3).map(e=>eventChip(e,true)).join('')}${events.length>3?`<span class="cv-more">+${events.length-3} more</span>`:''}</div></button>`}).join('')}</div></div>`;
+    const selectedEvents=forDate(selectedMonthDate);
+    const selectedDate=parseKey(selectedMonthDate);
+    const monthCells=days.map(d=>{
+      const dt=parseKey(d),events=forDate(d), dots=[...new Map(events.map(e=>[e.calendar,meta(e.calendar).color])).values()].slice(0,4);
+      return `<button type="button" class="cv-month-day ${dt.getMonth()!==month?'outside':''} ${d===dateKey(new Date())?'is-today':''} ${d===selectedMonthDate?'is-selected':''}" data-cv-month-date="${d}" aria-label="${esc(dt.toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'}))}"><span class="cv-date-number">${dt.getDate()}</span><span class="cv-event-count">${events.length?events.length:''}</span><span class="cv-event-dots">${dots.map(c=>`<i style="--dot:${c}"></i>`).join('')}</span></button>`;
+    }).join('');
+    const agenda=selectedEvents.length?selectedEvents.map(e=>{
+      const m=meta(e.calendar),time=e.allDay?'All day':`${fmtTime(e.start)}${e.end?` – ${fmtTime(e.end)}`:''}`;
+      return `<button type="button" class="cv-agenda-item" data-cv-date="${esc(e.date)}" style="--cv-color:${m.color}"><span class="cv-agenda-time">${esc(time)}</span><span class="cv-agenda-copy"><strong>${esc(e.title)}</strong><small>${esc(e.calendar)}${e.location?` · ${esc(e.location)}`:''}</small></span><span class="cv-agenda-chevron">›</span></button>`;
+    }).join(''):`<div class="cv-agenda-empty"><span>No events</span><small>Your day is clear.</small></div>`;
+    canvas.innerHTML=`<div class="cv-month-experience"><section class="cv-map-calendar"><div class="cv-month-grid" style="--cv-cols:${labels.length}">${labels.map(x=>`<div class="cv-weekday">${x}</div>`).join('')}${monthCells}</div></section><aside class="cv-month-agenda"><div class="cv-agenda-header"><span>${selectedDate.toLocaleDateString('en-CA',{weekday:'long'})}</span><strong>${selectedDate.toLocaleDateString('en-CA',{month:'long',day:'numeric'})}</strong><small>${selectedEvents.length} event${selectedEvents.length===1?'':'s'}</small></div><div class="cv-agenda-list">${agenda}</div><button type="button" class="cv-open-day" data-cv-open-day="${selectedMonthDate}">Open day view</button></aside></div>`;
+    canvas.querySelectorAll('[data-cv-month-date]').forEach(btn=>btn.addEventListener('click',()=>{selectedMonthDate=btn.dataset.cvMonthDate;focusDate=selectedMonthDate;render()}));
+    canvas.querySelector('[data-cv-open-day]')?.addEventListener('click',()=>{focusDate=selectedMonthDate;mode='day';render()});
   }
   function wireCanvas(canvas){
     canvas.querySelectorAll('[data-cv-date]').forEach(el=>el.addEventListener('click',(ev)=>{ev.stopPropagation();focusDate=el.dataset.cvDate;mode='day';render()}));
@@ -112,8 +126,8 @@
     document.querySelectorAll('.calendar-mode').forEach(btn=>btn.addEventListener('click',(e)=>{e.preventDefault();mode=btn.dataset.calendarMode||'month';render()}));
     $('calendarPrev')?.addEventListener('click',(e)=>{e.preventDefault();shift(-1)});
     $('calendarNext')?.addEventListener('click',(e)=>{e.preventDefault();shift(1)});
-    $('calendarToday')?.addEventListener('click',(e)=>{e.preventDefault();focusDate=dateKey(new Date());render()});
-    $('visualCalendarDate')?.addEventListener('change',(e)=>{if(e.target.value){focusDate=e.target.value;render()}});
+    $('calendarToday')?.addEventListener('click',(e)=>{e.preventDefault();focusDate=dateKey(new Date());selectedMonthDate=focusDate;render()});
+    $('visualCalendarDate')?.addEventListener('change',(e)=>{if(e.target.value){focusDate=e.target.value;selectedMonthDate=focusDate;render()}});
     $('showWeekends')?.addEventListener('change',render);
     $('visualShowAll')?.addEventListener('click',(e)=>{e.preventDefault();const state=readState();state.calendarVisibility ||= {};CALENDARS.forEach(([n])=>state.calendarVisibility[n]=true);localStorage.setItem(STORAGE_KEY,JSON.stringify(state));render()});
     document.querySelector('[data-view="visualCalendar"]')?.addEventListener('click',()=>setTimeout(render,0));
