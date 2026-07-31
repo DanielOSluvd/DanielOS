@@ -5,5 +5,17 @@
   "display": "standalone",
   "background_color": "#0b1020",
   "theme_color": "#111827",
-  "description": "Daniel's personal command centre."
+  "description": "Daniel's personal command centre.",
+  "icons": [
+    {
+      "src": "lion-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "lion-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

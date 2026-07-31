@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="mane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6c453"/>
+      <stop offset="1" stop-color="#d8891b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#111827"/>
+  <circle cx="32" cy="32" r="22" fill="url(#mane)"/>
+  <circle cx="32" cy="33" r="15.5" fill="#f7d27a"/>
+  <circle cx="21.5" cy="24" r="6" fill="#e3a531"/>
+  <circle cx="42.5" cy="24" r="6" fill="#e3a531"/>
+  <circle cx="21.5" cy="24" r="3.5" fill="#f7d27a"/>
+  <circle cx="42.5" cy="24" r="3.5" fill="#f7d27a"/>
+  <ellipse cx="26.5" cy="32" rx="2.2" ry="2.8" fill="#111827"/>
+  <ellipse cx="37.5" cy="32" rx="2.2" ry="2.8" fill="#111827"/>
+  <path d="M28.5 38.2c1.9-1.5 5.1-1.5 7 0-.5 2.7-2.1 4.2-3.5 4.2s-3-1.5-3.5-4.2Z" fill="#8f5b2b"/>
+  <path d="M32 42.2v3.2" stroke="#8f5b2b" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M32 45.2c-2.3 2.1-5.4 2.1-7.2.3M32 45.2c2.3 2.1 5.4 2.1 7.2.3" fill="none" stroke="#8f5b2b" stroke-width="1.8" stroke-linecap="round"/>
+</svg>
