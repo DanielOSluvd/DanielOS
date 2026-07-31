@@ -116,12 +116,14 @@ function combinedDailyTimeline(key){
   return (a.title||'').localeCompare(b.title||'');
  });
 }
-function timelineHTML(items){return items.map(x=>{
+function timelineHTML(items,{editable=false}={}){return items.map(x=>{
  const isCalendar=x.source==='calendar',meta=isCalendar?calendarMeta(x.calendar||'OTHER'):null;
  const shownTime=x.allDay?'All day':formatTime(x.time);
- const endText=isCalendar&&x.end?` – ${formatTime(x.end)}`:'';
+ const endText=x.end?` – ${formatTime(x.end)}`:'';
  const details=[x.note,x.location].filter(Boolean).join(' · ');
- return `<div class="timeline-item ${isCalendar?'calendar-timeline-item':'planned-timeline-item'}" ${isCalendar?`style="--timeline-calendar-color:${meta.color}"`:''}><div class="timeline-time">${esc(shownTime)}${endText}</div><div class="timeline-track"></div><div class="timeline-content"><strong>${esc(x.title)}</strong>${isCalendar?`<span class="timeline-calendar-badge">${esc(x.calendar||'OTHER')}</span>`:''}${details?`<small>${esc(details)}</small>`:''}</div></div>`
+ const plannedIndex=!isCalendar?Number(String(x.id||'').replace('planned-','')):-1;
+ const actions=editable&&!isCalendar?`<div class="item-edit-actions"><button type="button" class="mini-action" data-edit-timeline="${plannedIndex}">Edit</button><button type="button" class="mini-action danger" data-delete-timeline="${plannedIndex}">Delete</button></div>`:'';
+ return `<div class="timeline-item ${isCalendar?'calendar-timeline-item':'planned-timeline-item'}" ${isCalendar?`style="--timeline-calendar-color:${meta.color}"`:''}><div class="timeline-time">${esc(shownTime)}${endText}</div><div class="timeline-track"></div><div class="timeline-content"><div class="editable-item-heading"><strong>${esc(x.title)}</strong>${actions}</div>${isCalendar?`<span class="timeline-calendar-badge">${esc(x.calendar||'OTHER')}</span>`:''}${details?`<small>${esc(details)}</small>`:''}</div></div>`
  }).join('')}
 function renderHome(){
  renderTop3();document.getElementById('affirmation').textContent=affirmations[ai];
@@ -133,17 +135,25 @@ function renderDay(){
  const d=day();dayTheme.value=d.theme;dayOutcome.value=d.outcome;dayEnergy.value=d.energy;energyValue.textContent=`${d.energy}/10`;
  workNotes.value=d.workNotes;familyNotes.value=d.familyNotes;reflectionNotes.value=d.reflectionNotes;
  const goals=document.getElementById('goalList');goals.innerHTML='';
- d.goals.forEach((g,i)=>{const r=document.createElement('label');r.className='check-item'+(g.done?' done':'');r.innerHTML=`<input type="checkbox" ${g.done?'checked':''}><span>${esc(g.text)}</span>`;r.querySelector('input').onchange=e=>{g.done=e.target.checked;save();renderDay()};goals.append(r)});
- renderPeriodGoals('weeklyGoalList',weeklyGoals(),'weeklyProgress');
- renderPeriodGoals('monthlyGoalList',monthlyGoals(),'monthlyProgress');
+ d.goals.forEach((g,i)=>{const r=document.createElement('div');r.className='check-item editable-check-item'+(g.done?' done':'');r.innerHTML=`<label><input type="checkbox" ${g.done?'checked':''}><span>${esc(g.text)}</span></label><div class="item-edit-actions"><button type="button" class="mini-action" data-edit-goal="daily:${i}">Edit</button><button type="button" class="mini-action danger" data-delete-goal="daily:${i}">Delete</button></div>`;r.querySelector('input').onchange=e=>{g.done=e.target.checked;save();renderDay()};goals.append(r)});
+ renderPeriodGoals('weeklyGoalList',weeklyGoals(),'weeklyProgress','weekly');
+ renderPeriodGoals('monthlyGoalList',monthlyGoals(),'monthlyProgress','monthly');
  document.getElementById('weeklyGoalPeriod').textContent=weekLabel(selectedDate);
  document.getElementById('monthlyGoalPeriod').textContent=monthLabel(monthKey(selectedDate));
- document.getElementById('timelineList').innerHTML=timelineHTML(combinedDailyTimeline(selectedDate));
+ document.getElementById('timelineList').innerHTML=timelineHTML(combinedDailyTimeline(selectedDate),{editable:true});
+ wireDailyEditors();
 }
-function renderPeriodGoals(listId,items,progressId){
+function renderPeriodGoals(listId,items,progressId,scope){
  const list=document.getElementById(listId);list.innerHTML='';
- items.forEach(item=>{const r=document.createElement('label');r.className='check-item'+(item.done?' done':'');r.innerHTML=`<input type="checkbox" ${item.done?'checked':''}><span>${esc(item.text)}</span>`;r.querySelector('input').onchange=e=>{item.done=e.target.checked;save();renderDay()};list.append(r)});
+ items.forEach((item,index)=>{const r=document.createElement('div');r.className='check-item editable-check-item'+(item.done?' done':'');r.innerHTML=`<label><input type="checkbox" ${item.done?'checked':''}><span>${esc(item.text)}</span></label><div class="item-edit-actions"><button type="button" class="mini-action" data-edit-goal="${scope}:${index}">Edit</button><button type="button" class="mini-action danger" data-delete-goal="${scope}:${index}">Delete</button></div>`;r.querySelector('input').onchange=e=>{item.done=e.target.checked;save();renderDay()};list.append(r)});
  const complete=items.filter(x=>x.done).length;document.getElementById(progressId).textContent=`${complete} / ${items.length}`;
+}
+function dailyGoalCollection(scope){return scope==='weekly'?weeklyGoals():scope==='monthly'?monthlyGoals():day().goals}
+function wireDailyEditors(){
+ document.querySelectorAll('[data-edit-goal]').forEach(button=>button.onclick=()=>{const [scope,indexText]=button.dataset.editGoal.split(':'),items=dailyGoalCollection(scope),index=Number(indexText),item=items[index];if(!item)return;const text=prompt('Edit goal:',item.text);if(text?.trim()){item.text=text.trim();save();renderDay();renderHome()}});
+ document.querySelectorAll('[data-delete-goal]').forEach(button=>button.onclick=()=>{const [scope,indexText]=button.dataset.deleteGoal.split(':'),items=dailyGoalCollection(scope),index=Number(indexText);if(!items[index]||!confirm('Delete this goal?'))return;items.splice(index,1);save();renderDay();renderHome()});
+ document.querySelectorAll('[data-edit-timeline]').forEach(button=>button.onclick=()=>{const index=Number(button.dataset.editTimeline),item=day().timeline[index];if(!item)return;const time=prompt('Start time (24-hour format):',item.time||'09:00');if(!/^\d{2}:\d{2}$/.test(time||''))return;const title=prompt('Timeline title:',item.title||'');if(!title?.trim())return;const note=prompt('Optional note:',item.note||'')??item.note??'';Object.assign(item,{time,title:title.trim(),note});day().timeline.sort((a,b)=>a.time.localeCompare(b.time));save();renderDay();renderHome()});
+ document.querySelectorAll('[data-delete-timeline]').forEach(button=>button.onclick=()=>{const index=Number(button.dataset.deleteTimeline);if(!day().timeline[index]||!confirm('Delete this suggested timeline block?'))return;day().timeline.splice(index,1);save();renderDay();renderHome()});
 }
 ['dayTheme','dayOutcome','workNotes','familyNotes','reflectionNotes'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{const map={dayTheme:'theme',dayOutcome:'outcome',workNotes:'workNotes',familyNotes:'familyNotes',reflectionNotes:'reflectionNotes'};day()[map[id]]=e.target.value;save();renderHome()}));
 dayEnergy.oninput=e=>{day().energy=+e.target.value;energyValue.textContent=`${e.target.value}/10`;save()};

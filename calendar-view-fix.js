@@ -71,8 +71,8 @@
   function renderDay(canvas,title){
     const events=forDate(focusDate), all=events.filter(e=>e.allDay), timed=events.filter(e=>!e.allDay);
     title.textContent=parseKey(focusDate).toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-    const firstHour=Math.max(0,Math.min(23,...timed.map(e=>Number(e.start.slice(0,2))||23),7)-1), lastHour=Math.min(24,Math.max(...timed.map(e=>Number(e.end?.slice(0,2)||e.start.slice(0,2))||0),18)+2);
-    const hours=Array.from({length:lastHour-firstHour},(_,i)=>i+firstHour);
+    const firstHour=0, lastHour=24;
+    const hours=Array.from({length:24},(_,i)=>i);
     canvas.innerHTML=`<div class="cv-shell"><div class="cv-day-summary"><span>${events.length} event${events.length===1?'':'s'}</span><span>${esc(focusDate)}</span></div>${all.length?`<div class="cv-all-day"><b>All day</b><div>${all.map(e=>eventChip(e,true)).join('')}</div></div>`:''}<div class="cv-day-grid"><div class="cv-time-rail">${hours.map(h=>`<div>${fmtTime(`${String(h).padStart(2,'0')}:00`)}</div>`).join('')}</div><div class="cv-day-track" style="--cv-hours:${hours.length}">${hours.map(()=>'<div class="cv-hour-line"></div>').join('')}${timed.map(e=>{const top=Math.max(0,minutes(e.start)-firstHour*60),height=Math.max(34,(e.end?minutes(e.end)-minutes(e.start):60));return `<div class="cv-positioned" style="--cv-top:${top}px;--cv-height:${height}px">${eventChip(e)}</div>`}).join('')}${events.length?'':'<div class="cv-empty"><b>No events</b><span>No visible events are saved for this day.</span></div>'}</div></div></div>`;
   }
   function renderWeek(canvas,title){
