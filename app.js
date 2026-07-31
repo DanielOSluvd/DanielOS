@@ -285,53 +285,79 @@ function renderSystems(){
  systemGrid.innerHTML=SYSTEMS.map(s=>{const goals=state.goals.filter(g=>g.system===s.id);const active=goals.filter(g=>g.status==='active').length;return `<button class="card system ${s.className}" data-system-open="${s.id}"><span>${s.icon}</span><h3>${esc(s.name)}</h3><p>${esc(s.description)}</p><div class="system-card-footer"><strong>${active}</strong><small>active goals</small><b>Open system →</b></div></button>`}).join('');
  document.querySelectorAll('[data-system-open]').forEach(b=>b.onclick=()=>{activeSystemId=b.dataset.systemOpen;show('systemDetail')});
 }
+function goalEls(){
+ return {
+  dialog:document.getElementById('goalDialog'),form:document.getElementById('goalForm'),editId:document.getElementById('goalEditId'),dialogTitle:document.getElementById('goalDialogTitle'),
+  title:document.getElementById('goalTitleInput'),system:document.getElementById('goalSystemInput'),target:document.getElementById('goalTargetInput'),status:document.getElementById('goalStatusInput'),
+  why:document.getElementById('goalWhyInput'),success:document.getElementById('goalSuccessInput'),systemFilter:document.getElementById('goalSystemFilter'),statusFilter:document.getElementById('goalStatusFilter'),
+  sort:document.getElementById('goalSort'),summary:document.getElementById('goalSummary'),list:document.getElementById('masterGoalList'),systemList:document.getElementById('systemGoalList')
+ }
+}
 function populateGoalSelectors(){
- const options=SYSTEMS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
- goalSystemInput.innerHTML=options;goalSystemFilter.innerHTML=`<option value="all">All systems</option>${options}`;
+ const el=goalEls(),options=SYSTEMS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+ if(el.system)el.system.innerHTML=options;
+ if(el.systemFilter){const current=el.systemFilter.value||'all';el.systemFilter.innerHTML=`<option value="all">All systems</option>${options}`;el.systemFilter.value=[...el.systemFilter.options].some(o=>o.value===current)?current:'all'}
 }
 function openGoalDialog(systemId=activeSystemId,goalId=''){
- populateGoalSelectors();goalEditId.value=goalId;const g=state.goals.find(x=>x.id===goalId);
- goalDialogTitle.textContent=g?'Edit goal':'Create a goal';goalTitleInput.value=g?.title||'';goalSystemInput.value=g?.system||systemId;goalTargetInput.value=g?.target||'';goalStatusInput.value=g?.status||'active';goalWhyInput.value=g?.why||'';goalSuccessInput.value=g?.success||'';goalDialog.showModal();
+ const el=goalEls();populateGoalSelectors();
+ if(!el.dialog||!el.form)return;
+ const g=state.goals.find(x=>x.id===goalId);
+ el.form.reset();el.editId.value=goalId;el.dialogTitle.textContent=g?'Edit goal':'Create a goal';el.title.value=g?.title||'';el.system.value=g?.system||systemId||SYSTEMS[0].id;el.target.value=g?.target||'';el.status.value=g?.status||'active';el.why.value=g?.why||'';el.success.value=g?.success||'';
+ if(typeof el.dialog.showModal==='function')el.dialog.showModal();else el.dialog.setAttribute('open','');
+ setTimeout(()=>el.title.focus(),0);
 }
-goalForm.addEventListener('submit',e=>{
- if(e.submitter?.value==='cancel')return;e.preventDefault();if(!goalTitleInput.value.trim())return;
- let g=state.goals.find(x=>x.id===goalEditId.value);if(!g){g={id:uid(),createdAt:new Date().toISOString(),milestones:[],timeline:[]};state.goals.push(g)}
- Object.assign(g,{title:goalTitleInput.value.trim(),system:goalSystemInput.value,target:goalTargetInput.value,status:goalStatusInput.value,why:goalWhyInput.value.trim(),success:goalSuccessInput.value.trim()});save();goalDialog.close();renderGoals();renderSystems();if(document.getElementById('systemDetail').classList.contains('active-view'))renderSystemDetail();
-});
+function saveGoalFromDialog(){
+ const el=goalEls(),title=el.title?.value.trim();if(!title)return false;
+ let g=state.goals.find(x=>x.id===el.editId.value);
+ if(!g){g={id:uid(),createdAt:new Date().toISOString(),milestones:[],timeline:[]};state.goals.push(g)}
+ Object.assign(g,{title,system:el.system.value||SYSTEMS[0].id,target:el.target.value||'',status:el.status.value||'active',why:el.why.value.trim(),success:el.success.value.trim()});
+ save();if(el.dialog.open)el.dialog.close();renderGoals();renderSystems();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail();return true;
+}
+const goalFormEl=document.getElementById('goalForm');
+if(goalFormEl)goalFormEl.addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();saveGoalFromDialog()});
 function goalCardHTML(g){
  const s=systemMeta(g.system),p=goalProgress(g),remaining=daysToTarget(g.target),milestones=g.milestones||[],timeline=g.timeline||[];
+ const milestoneHTML=milestones.length?milestones.map(m=>`<label class="check-item"><input type="checkbox" data-master-milestone="${g.id}" data-mid="${m.id}" ${m.done?'checked':''}><span>${esc(m.text)}</span></label>`).join(''):'<p class="muted">No stepping stones yet.</p>';
+ const timelineHTML=timeline.length?timeline.map(t=>`<div class="goal-timeline-entry"><strong>${esc(t.title)}</strong><small>${esc(t.date||'No date')}${t.note?' · '+esc(t.note):''}</small></div>`).join(''):'<p class="muted">No timeline entries yet.</p>';
  return `<article class="card master-goal" style="--system-accent:var(--${g.system},#8da2fb)">
- <div class="goal-card-top"><div><span class="system-chip">${s.icon} ${esc(s.name)}</span><h3>${esc(g.title)}</h3><p>${esc(g.why||g.success||'Add a reason or definition of success to make this goal more meaningful.')}</p></div><span class="status-badge ${g.status}">${g.status}</span></div>
+ <div class="goal-card-top"><div><span class="system-chip">${s.icon} ${esc(s.name)}</span><h3>${esc(g.title)}</h3><p>${esc(g.why||g.success||'Add a reason or definition of success to make this goal more meaningful.')}</p></div><span class="status-badge ${g.status}">${esc(g.status)}</span></div>
  <div class="goal-progress-row"><div class="progress-track"><i style="width:${p}%"></i></div><strong>${p}%</strong></div>
  <div class="goal-facts"><span>🎯 ${g.target?esc(g.target):'No target date'}</span><span>${remaining===null?'Timeline open':remaining<0?Math.abs(remaining)+' days overdue':remaining+' days remaining'}</span><span>${milestones.filter(x=>x.done).length}/${milestones.length} stepping stones</span></div>
- <details><summary>});
- <div class="goal-card-actions"><button class="ghost" data-edit-goal="${g.id}">Edit</button><button class="ghost" data-toggle-goal="${g.id}">${g.status==='complete'?'Reopen':'Mark complete'}</button><button class="danger" data-delete-goal="${g.id}">Delete</button></div></article>`
+ <details class="goal-details"><summary>Stepping stones and timeline</summary><div class="goal-detail-grid"><section><div class="section-head"><h4>Stepping stones</h4><button type="button" class="ghost" data-add-master-milestone="${g.id}">+ Add</button></div>${milestoneHTML}</section><section><div class="section-head"><h4>Timeline</h4><button type="button" class="ghost" data-add-master-timeline="${g.id}">+ Add</button></div>${timelineHTML}</section></div></details>
+ <div class="goal-card-actions"><button type="button" class="ghost" data-master-edit="${g.id}">Edit</button><button type="button" class="ghost" data-master-toggle="${g.id}">${g.status==='complete'?'Reopen':'Mark complete'}</button><button type="button" class="danger" data-master-delete="${g.id}">Delete</button></div></article>`
 }
 function wireGoalActions(){
- document.querySelectorAll('[data-edit-goal]').forEach(b=>b.onclick=()=>openGoalDialog('',b.dataset.editGoal));
- document.querySelectorAll('[data-toggle-goal]').forEach(b=>b.onclick=()=>{const g=state.goals.find(x=>x.id===b.dataset.toggleGoal);g.status=g.status==='complete'?'active':'complete';save();renderGoals();renderSystemDetail()});
- document.querySelectorAll('[data-delete-goal]').forEach(b=>b.onclick=()=>{if(confirm('Delete this goal and its stepping stones?')){state.goals=state.goals.filter(x=>x.id!==b.dataset.deleteGoal);save();renderGoals();renderSystemDetail();renderSystems()}});
- document.querySelectorAll('[data-milestone]').forEach(c=>c.onchange=()=>{const g=state.goals.find(x=>x.id===c.dataset.milestone),m=g.milestones.find(x=>x.id===c.dataset.mid);m.done=c.checked;save();renderGoals();if(document.getElementById('systemDetail').classList.contains('active-view'))renderSystemDetail()});
- document.querySelectorAll('[data-add-milestone]').forEach(b=>b.onclick=()=>{const text=prompt('What stepping stone will move this goal forward?');if(text?.trim()){state.goals.find(x=>x.id===b.dataset.addMilestone).milestones.push({id:uid(),text:text.trim(),done:false});save();renderGoals();if(document.getElementById('systemDetail').classList.contains('active-view'))renderSystemDetail()}});
- document.querySelectorAll('[data-add-goal-timeline]').forEach(b=>b.onclick=()=>{const title=prompt('Timeline step or milestone:');if(!title?.trim())return;const date=prompt('Target date (YYYY-MM-DD), or leave blank:','')||'';const note=prompt('Optional note:','')||'';state.goals.find(x=>x.id===b.dataset.addGoalTimeline).timeline.push({id:uid(),title:title.trim(),date,note});save();renderGoals();if(document.getElementById('systemDetail').classList.contains('active-view'))renderSystemDetail()});
+ document.querySelectorAll('[data-master-edit]').forEach(b=>b.onclick=()=>openGoalDialog('',b.dataset.masterEdit));
+ document.querySelectorAll('[data-master-toggle]').forEach(b=>b.onclick=()=>{const g=state.goals.find(x=>x.id===b.dataset.masterToggle);if(!g)return;g.status=g.status==='complete'?'active':'complete';save();renderGoals();renderSystems();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail()});
+ document.querySelectorAll('[data-master-delete]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this goal and its stepping stones?'))return;state.goals=state.goals.filter(x=>x.id!==b.dataset.masterDelete);save();renderGoals();renderSystems();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail()});
+ document.querySelectorAll('[data-master-milestone]').forEach(c=>c.onchange=()=>{const g=state.goals.find(x=>x.id===c.dataset.masterMilestone),m=g?.milestones?.find(x=>x.id===c.dataset.mid);if(!m)return;m.done=c.checked;save();renderGoals();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail()});
+ document.querySelectorAll('[data-add-master-milestone]').forEach(b=>b.onclick=()=>{const text=prompt('What stepping stone will move this goal forward?');const g=state.goals.find(x=>x.id===b.dataset.addMasterMilestone);if(text?.trim()&&g){g.milestones||=[];g.milestones.push({id:uid(),text:text.trim(),done:false});save();renderGoals();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail()}});
+ document.querySelectorAll('[data-add-master-timeline]').forEach(b=>b.onclick=()=>{const g=state.goals.find(x=>x.id===b.dataset.addMasterTimeline),title=prompt('Timeline step or milestone:');if(!g||!title?.trim())return;const date=prompt('Target date (YYYY-MM-DD), or leave blank:','')||'',note=prompt('Optional note:','')||'';g.timeline||=[];g.timeline.push({id:uid(),title:title.trim(),date,note});save();renderGoals();if(document.getElementById('systemDetail')?.classList.contains('active-view'))renderSystemDetail()});
 }
 function renderGoals(){
- populateGoalSelectors();const system=goalSystemFilter.value||'all',status=goalStatusFilter.value||'all',sort=goalSort.value||'target';let goals=[...state.goals].filter(g=>(system==='all'||g.system===system)&&(status==='all'||g.status===status));
+ const el=goalEls();populateGoalSelectors();if(!el.list||!el.summary)return;
+ const system=el.systemFilter?.value||'all',status=el.statusFilter?.value||'all',sort=el.sort?.value||'target';let goals=[...state.goals].filter(g=>(system==='all'||g.system===system)&&(status==='all'||g.status===status));
  goals.sort((a,b)=>sort==='progress'?goalProgress(b)-goalProgress(a):sort==='system'?systemMeta(a.system).name.localeCompare(systemMeta(b.system).name):sort==='created'?(b.createdAt||'').localeCompare(a.createdAt||''):(a.target||'9999').localeCompare(b.target||'9999'));
  const active=state.goals.filter(g=>g.status==='active').length,complete=state.goals.filter(g=>g.status==='complete').length,avg=state.goals.length?Math.round(state.goals.reduce((n,g)=>n+goalProgress(g),0)/state.goals.length):0;
- goalSummary.innerHTML=`<article class="metric"><span>Total goals</span><strong>${state.goals.length}</strong><small>across all systems</small></article><article class="metric"><span>Active</span><strong>${active}</strong><small>currently moving</small></article><article class="metric"><span>Completed</span><strong>${complete}</strong><small>wins achieved</small></article><article class="metric"><span>Overall progress</span><strong>${avg}%</strong><small>milestone completion</small></article>`;
- masterGoalList.innerHTML=goals.length?goals.map(goalCardHTML).join(''):'<article class="card empty-state"><h3>No goals match these filters</h3><p>Create a goal or change the filters to see more.</p></article>';wireGoalActions();
+ el.summary.innerHTML=`<article class="metric"><span>Total goals</span><strong>${state.goals.length}</strong><small>across all systems</small></article><article class="metric"><span>Active</span><strong>${active}</strong><small>currently moving</small></article><article class="metric"><span>Completed</span><strong>${complete}</strong><small>wins achieved</small></article><article class="metric"><span>Overall progress</span><strong>${avg}%</strong><small>milestone completion</small></article>`;
+ el.list.innerHTML=goals.length?goals.map(goalCardHTML).join(''):'<article class="card empty-state"><h3>No goals match these filters</h3><p>Create a goal or change the filters to see more.</p></article>';wireGoalActions();
 }
 function renderSystemDetail(){
- const s=systemMeta(activeSystemId),data=state.systemData[activeSystemId];pageTitle.textContent=s.name;
- systemDetailHero.className=`card system-detail-hero ${s.className}`;systemDetailHero.innerHTML=`<span class="system-icon-large">${s.icon}</span><div><span class="pill">LIFE SYSTEM</span><h2>${esc(s.name)}</h2><p>${esc(s.description)}</p></div><div class="system-score"><strong>${state.goals.filter(g=>g.system===s.id&&g.status==='active').length}</strong><span>active goals</span></div>`;
- systemVision.value=data.vision||'';systemTimelineList.innerHTML=data.timeline.length?data.timeline.map(t=>`<div class="timeline-item"><div class="timeline-time">${esc(t.date||'Anytime')}</div><div class="timeline-track"></div><div class="timeline-content"><strong>${esc(t.title)}</strong><small>${esc(t.note||'')}</small></div></div>`).join(''):'<p class="muted">No system timeline entries yet.</p>';
- const goals=state.goals.filter(g=>g.system===s.id);systemGoalList.innerHTML=goals.length?goals.map(goalCardHTML).join(''):'<div class="empty-state"><h3>No goals yet</h3><p>Create the first meaningful goal for this life system.</p></div>';wireGoalActions();
+ const s=systemMeta(activeSystemId);state.systemData[activeSystemId]||={vision:'',timeline:[]};const data=state.systemData[activeSystemId],hero=document.getElementById('systemDetailHero'),vision=document.getElementById('systemVision'),timelineList=document.getElementById('systemTimelineList'),goalList=document.getElementById('systemGoalList');
+ document.getElementById('pageTitle').textContent=s.name;
+ hero.className=`card system-detail-hero ${s.className}`;hero.innerHTML=`<span class="system-icon-large">${s.icon}</span><div><span class="pill">LIFE SYSTEM</span><h2>${esc(s.name)}</h2><p>${esc(s.description)}</p></div><div class="system-score"><strong>${state.goals.filter(g=>g.system===s.id&&g.status==='active').length}</strong><span>active goals</span></div>`;
+ vision.value=data.vision||'';timelineList.innerHTML=data.timeline.length?data.timeline.map(t=>`<div class="timeline-item"><div class="timeline-time">${esc(t.date||'Anytime')}</div><div class="timeline-track"></div><div class="timeline-content"><strong>${esc(t.title)}</strong><small>${esc(t.note||'')}</small></div></div>`).join(''):'<p class="muted">No system timeline entries yet.</p>';
+ const goals=state.goals.filter(g=>g.system===s.id);goalList.innerHTML=goals.length?goals.map(goalCardHTML).join(''):'<div class="empty-state"><h3>No goals yet</h3><p>Create the first meaningful goal for this life system.</p></div>';wireGoalActions();
 }
-addMasterGoal.onclick=()=>openGoalDialog(SYSTEMS[0].id);addSystemGoal.onclick=()=>openGoalDialog(activeSystemId);backToSystems.onclick=()=>show('systems');
-goalSystemFilter.onchange=renderGoals;goalStatusFilter.onchange=renderGoals;goalSort.onchange=renderGoals;
-systemVision.oninput=e=>{state.systemData[activeSystemId].vision=e.target.value;save()};
-addSystemTimeline.onclick=()=>{const title=prompt('What system milestone or event should be added?');if(!title?.trim())return;const date=prompt('Target date (YYYY-MM-DD), or leave blank:','')||'';const note=prompt('Optional note:','')||'';state.systemData[activeSystemId].timeline.push({id:uid(),title:title.trim(),date,note});save();renderSystemDetail()};
+const addMasterGoalEl=document.getElementById('addMasterGoal'),addSystemGoalEl=document.getElementById('addSystemGoal'),backToSystemsEl=document.getElementById('backToSystems');
+if(addMasterGoalEl)addMasterGoalEl.onclick=()=>openGoalDialog(SYSTEMS[0].id);
+if(addSystemGoalEl)addSystemGoalEl.onclick=()=>openGoalDialog(activeSystemId);
+if(backToSystemsEl)backToSystemsEl.onclick=()=>show('systems');
+const goalSystemFilterEl=document.getElementById('goalSystemFilter'),goalStatusFilterEl=document.getElementById('goalStatusFilter'),goalSortEl=document.getElementById('goalSort');
+if(goalSystemFilterEl)goalSystemFilterEl.onchange=renderGoals;if(goalStatusFilterEl)goalStatusFilterEl.onchange=renderGoals;if(goalSortEl)goalSortEl.onchange=renderGoals;
+const systemVisionEl=document.getElementById('systemVision'),addSystemTimelineEl=document.getElementById('addSystemTimeline');
+if(systemVisionEl)systemVisionEl.oninput=e=>{state.systemData[activeSystemId]||={vision:'',timeline:[]};state.systemData[activeSystemId].vision=e.target.value;save()};
+if(addSystemTimelineEl)addSystemTimelineEl.onclick=()=>{const title=prompt('What system milestone or event should be added?');if(!title?.trim())return;const date=prompt('Target date (YYYY-MM-DD), or leave blank:','')||'',note=prompt('Optional note:','')||'';state.systemData[activeSystemId]||={vision:'',timeline:[]};state.systemData[activeSystemId].timeline.push({id:uid(),title:title.trim(),date,note});save();renderSystemDetail()};
 
 saveReview.onclick=()=>{const week=selectedDate.slice(0,7);state.reviews[week]={wins:reviewWins.value,friction:reviewFriction.value,lessons:reviewLessons.value,focus:reviewFocus.value};save();alert('Weekly review saved.')};
 exportBackup.onclick=()=>download(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),'daniel-os-backup.json');
