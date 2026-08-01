@@ -1,10 +1,11 @@
 const KEY='danielOS.v1';
 const defaults={
   days:{}, weeklyGoals:{}, monthlyGoals:{}, importedEvents:[], calendarSubscriptions:{}, calendarVisibility:{}, calendarSync:{}, calendarSyncSettings:{startDate:'2025-01-01',futureDays:730}, reviews:{}, goals:[], systemData:{},
-  top3:[
-    {text:'Store: Set a clear peak plan and coach one observable behaviour.',done:false},
-    {text:'Family: Give Mia and your wife an undistracted evening block.',done:false},
-    {text:'Self: Complete a short reset instead of chasing a perfect routine.',done:false}
+  top3ByDate:{},
+  top3Template:[
+    {text:'Store: Set a clear peak plan and coach one observable behaviour.'},
+    {text:'Family: Give Mia and your wife an undistracted evening block.'},
+    {text:'Self: Complete a short reset instead of chasing a perfect routine.'}
   ]
 };
 let state=load();
@@ -24,6 +25,13 @@ SYSTEMS.forEach(s=>{state.systemData[s.id] ||= {vision:'',timeline:[]}});
 CALENDARS.forEach(c=>{if(state.calendarVisibility[c.name]===undefined)state.calendarVisibility[c.name]=true;if(!state.calendarSubscriptions[c.name])state.calendarSubscriptions[c.name]=''});
 if(state.calendarUrl && !state.calendarSubscriptions.Personal){state.calendarSubscriptions.Personal=state.calendarUrl;delete state.calendarUrl;save();}
 let selectedDate=localDateKey(new Date());
+state.top3ByDate ||= {};
+state.top3Template ||= defaults.top3Template.map(item=>({...item}));
+if(Array.isArray(state.top3) && !state.top3ByDate[selectedDate]){
+ state.top3ByDate[selectedDate]=state.top3.map(item=>({text:item.text,done:!!item.done}));
+ delete state.top3;
+ save();
+}
 let visualCalendarDate=selectedDate;
 let visualCalendarMode='day';
 let deferredPrompt=null;
@@ -42,6 +50,19 @@ function updateStorageStatus(){
 }
 function localDateKey(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
 function displayDate(key){return new Intl.DateTimeFormat('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(new Date(key+'T12:00:00'))}
+function top3ForDate(key=selectedDate){
+ if(!state.top3ByDate[key])state.top3ByDate[key]=(state.top3Template||defaults.top3Template).map(item=>({text:item.text,done:false}));
+ return state.top3ByDate[key];
+}
+function updateHomeDateUI(){
+ const label=document.getElementById('homeDateLabel');
+ const title=document.getElementById('homeTop3Title');
+ if(label)label.textContent=displayDate(selectedDate);
+ if(title)title.textContent=selectedDate===localDateKey(new Date())?"Today's Top 3":`${new Intl.DateTimeFormat('en-CA',{month:'short',day:'numeric'}).format(new Date(selectedDate+'T12:00:00'))} Top 3`;
+ const headerDate=document.getElementById('todayLabel');
+ if(headerDate)headerDate.textContent=displayDate(selectedDate);
+}
+
 function weekKey(key){const d=new Date(key+'T12:00:00');const dayNum=(d.getDay()+6)%7;d.setDate(d.getDate()-dayNum);return localDateKey(d)}
 function weekLabel(key){const start=new Date(weekKey(key)+'T12:00:00');const end=new Date(start);end.setDate(end.getDate()+6);const a=new Intl.DateTimeFormat('en-CA',{month:'short',day:'numeric'}).format(start);const b=new Intl.DateTimeFormat('en-CA',{month:'short',day:'numeric',year:'numeric'}).format(end);return `${a} – ${b}`}
 function monthKey(key){return key.slice(0,7)}
@@ -89,16 +110,20 @@ function show(id){
  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active-view',v.id===id));
  document.querySelectorAll('.nav').forEach(v=>v.classList.toggle('active',v.dataset.view===id));
  document.getElementById('pageTitle').textContent={home:'Good afternoon, Daniel.',daily:'Daily Command Page',calendar:'Apple Calendar Bridge',visualCalendar:'Calendar View',goals:'Goals',systems:'Life Systems',systemDetail:systemMeta(activeSystemId).name,review:'Weekly Review',settings:'Settings'}[id];
- if(id==='daily')renderDay(); if(id==='visualCalendar')renderVisualCalendar(); if(id==='calendar')renderCalendar(); if(id==='goals')renderGoals(); if(id==='systems')renderSystems(); if(id==='systemDetail')renderSystemDetail();
+ if(id==='home')renderHome(); if(id==='daily')renderDay(); if(id==='visualCalendar')renderVisualCalendar(); if(id==='calendar')renderCalendar(); if(id==='goals')renderGoals(); if(id==='systems')renderSystems(); if(id==='systemDetail')renderSystemDetail();
 }
 
 const affirmations=['I move through today with calm authority, clarity and purpose.','I do not need to rush to be effective.','My presence creates order, confidence and momentum.','I lead my life deliberately instead of reacting to it.','What I consistently embody becomes my reality.'];
 let ai=0;document.getElementById('newAffirmation').onclick=()=>{ai=(ai+1)%affirmations.length;document.getElementById('affirmation').textContent=affirmations[ai]};
 
 function renderTop3(){
- const el=document.getElementById('top3List');el.innerHTML='';
- state.top3.forEach((x,i)=>{const row=document.createElement('label');row.className='check-item'+(x.done?' done':'');row.innerHTML=`<input type="checkbox" ${x.done?'checked':''}><span>${esc(x.text)}</span>`;row.querySelector('input').onchange=e=>{x.done=e.target.checked;save();renderTop3()};el.append(row)});
- const c=state.top3.filter(x=>x.done).length;document.getElementById('top3Badge').textContent=`${c} / 3`;document.getElementById('priorityMetric').textContent=`${c}/3`;
+ const el=document.getElementById('top3List');if(!el)return;el.innerHTML='';
+ const items=top3ForDate(selectedDate);
+ items.forEach(x=>{const row=document.createElement('label');row.className='check-item'+(x.done?' done':'');row.innerHTML=`<input type="checkbox" ${x.done?'checked':''}><span>${esc(x.text)}</span>`;row.querySelector('input').onchange=e=>{x.done=e.target.checked;save();renderTop3()};el.append(row)});
+ const c=items.filter(x=>x.done).length;
+ document.getElementById('top3Badge').textContent=`${c} / ${items.length}`;
+ document.getElementById('priorityMetric').textContent=`${c}/${items.length}`;
+ updateHomeDateUI();
 }
 function normalizeDailyCalendarEvent(e,index=0){
  const date=String(e.date||e.startDate||e.start||'').match(/^\d{4}-\d{2}-\d{2}/)?.[0]||'';
@@ -126,6 +151,7 @@ function timelineHTML(items,{editable=false}={}){return items.map(x=>{
  return `<div class="timeline-item ${isCalendar?'calendar-timeline-item':'planned-timeline-item'}" ${isCalendar?`style="--timeline-calendar-color:${meta.color}"`:''}><div class="timeline-time">${esc(shownTime)}${endText}</div><div class="timeline-track"></div><div class="timeline-content"><div class="editable-item-heading"><strong>${esc(x.title)}</strong>${actions}</div>${isCalendar?`<span class="timeline-calendar-badge">${esc(x.calendar||'OTHER')}</span>`:''}${details?`<small>${esc(details)}</small>`:''}</div></div>`
  }).join('')}
 function renderHome(){
+ updateHomeDateUI();
  renderTop3();document.getElementById('affirmation').textContent=affirmations[ai];
  const merged=combinedDailyTimeline(selectedDate);document.getElementById('homeTimeline').innerHTML=timelineHTML(merged.slice(0,5));
  const events=currentEvents();document.getElementById('calendarSnapshot').innerHTML=events.length?events.slice(0,5).map(eventHTML).join(''):'<p class="muted">No imported events for today.</p>';
@@ -158,7 +184,13 @@ function wireDailyEditors(){
 ['dayTheme','dayOutcome','workNotes','familyNotes','reflectionNotes'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{const map={dayTheme:'theme',dayOutcome:'outcome',workNotes:'workNotes',familyNotes:'familyNotes',reflectionNotes:'reflectionNotes'};day()[map[id]]=e.target.value;save();renderHome()}));
 dayEnergy.oninput=e=>{day().energy=+e.target.value;energyValue.textContent=`${e.target.value}/10`;save()};
 datePicker.onchange=e=>{selectedDate=e.target.value;renderDay();renderHome()};
-todayBtn.onclick=()=>{selectedDate=localDateKey(new Date());show('daily')};
+todayBtn.onclick=()=>{selectedDate=localDateKey(new Date());const current=document.querySelector('.view.active-view')?.id||'home';if(current==='home')renderHome();else if(current==='daily')renderDay();else show('daily')};
+const homePrevDay=document.getElementById('homePrevDay');
+const homeNextDay=document.getElementById('homeNextDay');
+const homeToday=document.getElementById('homeToday');
+if(homePrevDay)homePrevDay.onclick=()=>{selectedDate=dateAdd(selectedDate,-1);renderHome()};
+if(homeNextDay)homeNextDay.onclick=()=>{selectedDate=dateAdd(selectedDate,1);renderHome()};
+if(homeToday)homeToday.onclick=()=>{selectedDate=localDateKey(new Date());renderHome()};
 addGoal.onclick=()=>{const text=prompt('What goal should be added?');if(text?.trim()){day().goals.push({text:text.trim(),done:false});save();renderDay()}};
 addWeeklyGoal.onclick=()=>{const text=prompt('What weekly goal should be added?');if(text?.trim()){weeklyGoals().push({text:text.trim(),done:false});save();renderDay()}};
 addMonthlyGoal.onclick=()=>{const text=prompt('What monthly goal should be added?');if(text?.trim()){monthlyGoals().push({text:text.trim(),done:false});save();renderDay()}};

@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <title>Daniel OS</title>
+  <link rel="icon" type="image/svg+xml" href="lion-favicon.svg" />
+  <link rel="alternate icon" type="image/png" sizes="32x32" href="lion-favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="lion-icon-192.png" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -46,6 +49,17 @@
       </header>
 
       <section id="home" class="view active-view">
+        <div class="home-date-nav card" aria-label="Home day navigation">
+          <button id="homePrevDay" type="button" class="ghost home-date-arrow" aria-label="Previous day">‹</button>
+          <div class="home-date-centre">
+            <span class="pill">HOME DAY</span>
+            <strong id="homeDateLabel"></strong>
+          </div>
+          <div class="home-date-actions">
+            <button id="homeToday" type="button" class="ghost">Today</button>
+            <button id="homeNextDay" type="button" class="ghost home-date-arrow" aria-label="Next day">›</button>
+          </div>
+        </div>
         <div class="hero card">
           <div>
             <span class="pill">TODAY'S COMMAND</span>
@@ -70,7 +84,7 @@
 
         <div class="grid two">
           <article class="card">
-            <div class="section-head"><div><h3>Today's Top 3</h3><p>Three outcomes that make today successful.</p></div><span id="top3Badge" class="pill">0 / 3</span></div>
+            <div class="section-head"><div><h3 id="homeTop3Title">Today's Top 3</h3><p>Three outcomes that make today successful.</p></div><span id="top3Badge" class="pill">0 / 3</span></div>
             <div id="top3List" class="check-list"></div>
           </article>
           <article class="card">
@@ -82,11 +96,11 @@
 
         <div class="grid two">
           <article class="card">
-            <div class="section-head"><div><h3>Today's timeline</h3><p>Generated from your daily page.</p></div><button class="ghost jump" data-jump="daily">Open day</button></div>
+            <div class="section-head"><div><h3>Selected day timeline</h3><p>Generated from that date's daily page and calendars.</p></div><button class="ghost jump" data-jump="daily">Open day</button></div>
             <div id="homeTimeline" class="timeline compact"></div>
           </article>
           <article class="card">
-            <div class="section-head"><div><h3>Calendar snapshot</h3><p>Events imported into Daniel OS.</p></div><button class="ghost jump" data-jump="calendar">Connect</button></div>
+            <div class="section-head"><div><h3>Selected day calendar</h3><p>Events imported into Daniel OS.</p></div><button class="ghost jump" data-jump="calendar">Connect</button></div>
             <div id="calendarSnapshot" class="event-list"></div>
           </article>
         </div>

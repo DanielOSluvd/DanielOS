@@ -128,3 +128,12 @@ select{width:100%;margin-top:7px;background:rgba(4,8,18,.38);border:1px solid va
 .cv-open-day:hover{filter:brightness(1.06)}
 @media(max-width:980px){.cv-month-experience{grid-template-columns:1fr}.cv-month-agenda{position:static}.cv-agenda-list{max-height:340px}}
 @media(max-width:760px){.cv-map-calendar{padding:10px;border-radius:22px}.cv-map-calendar .cv-month-grid{min-width:620px;gap:5px}.cv-map-calendar .cv-month-day{min-height:78px;border-radius:14px}.cv-month-agenda{border-radius:22px}}
+
+
+/* v8.11 dated Home dashboard */
+.home-date-nav{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:14px 18px;background:linear-gradient(135deg,rgba(141,162,251,.10),rgba(185,156,255,.045))}
+.home-date-centre{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;min-width:0}
+.home-date-centre strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.home-date-actions{display:flex;align-items:center;gap:8px}
+.home-date-arrow{width:42px;height:42px;padding:0;font-size:28px;line-height:1;border-radius:50%}
+@media(max-width:520px){.home-date-nav{padding:12px;gap:8px}.home-date-centre strong{font-size:14px}.home-date-actions #homeToday{display:none}.home-date-arrow{width:38px;height:38px}}
