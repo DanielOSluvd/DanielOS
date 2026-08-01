@@ -151,6 +151,7 @@ function timelineHTML(items,{editable=false}={}){return items.map(x=>{
  return `<div class="timeline-item ${isCalendar?'calendar-timeline-item':'planned-timeline-item'}" ${isCalendar?`style="--timeline-calendar-color:${meta.color}"`:''}><div class="timeline-time">${esc(shownTime)}${endText}</div><div class="timeline-track"></div><div class="timeline-content"><div class="editable-item-heading"><strong>${esc(x.title)}</strong>${actions}</div>${isCalendar?`<span class="timeline-calendar-badge">${esc(x.calendar||'OTHER')}</span>`:''}${details?`<small>${esc(details)}</small>`:''}</div></div>`
  }).join('')}
 function renderHome(){
+ wireHomeDateNavigation();
  updateHomeDateUI();
  renderTop3();document.getElementById('affirmation').textContent=affirmations[ai];
  const merged=combinedDailyTimeline(selectedDate);document.getElementById('homeTimeline').innerHTML=timelineHTML(merged.slice(0,5));
@@ -185,12 +186,32 @@ function wireDailyEditors(){
 dayEnergy.oninput=e=>{day().energy=+e.target.value;energyValue.textContent=`${e.target.value}/10`;save()};
 datePicker.onchange=e=>{selectedDate=e.target.value;renderDay();renderHome()};
 todayBtn.onclick=()=>{selectedDate=localDateKey(new Date());const current=document.querySelector('.view.active-view')?.id||'home';if(current==='home')renderHome();else if(current==='daily')renderDay();else show('daily')};
-const homePrevDay=document.getElementById('homePrevDay');
-const homeNextDay=document.getElementById('homeNextDay');
-const homeToday=document.getElementById('homeToday');
-if(homePrevDay)homePrevDay.onclick=()=>{selectedDate=dateAdd(selectedDate,-1);renderHome()};
-if(homeNextDay)homeNextDay.onclick=()=>{selectedDate=dateAdd(selectedDate,1);renderHome()};
-if(homeToday)homeToday.onclick=()=>{selectedDate=localDateKey(new Date());renderHome()};
+function changeHomeDate(days){
+ selectedDate=dateAdd(selectedDate,days);
+ visualCalendarDate=selectedDate;
+ renderHome();
+}
+function resetHomeToToday(){
+ selectedDate=localDateKey(new Date());
+ visualCalendarDate=selectedDate;
+ renderHome();
+}
+function wireHomeDateNavigation(){
+ const nav=document.querySelector('.home-date-nav');
+ if(!nav||nav.dataset.wired==='true')return;
+ nav.dataset.wired='true';
+ nav.addEventListener('click',event=>{
+  const button=event.target.closest('button');
+  if(!button||!nav.contains(button))return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(button.id==='homePrevDay')changeHomeDate(-1);
+  else if(button.id==='homeNextDay')changeHomeDate(1);
+  else if(button.id==='homeToday')resetHomeToToday();
+ });
+}
+wireHomeDateNavigation();
+window.addEventListener('DOMContentLoaded',wireHomeDateNavigation,{once:true});
 addGoal.onclick=()=>{const text=prompt('What goal should be added?');if(text?.trim()){day().goals.push({text:text.trim(),done:false});save();renderDay()}};
 addWeeklyGoal.onclick=()=>{const text=prompt('What weekly goal should be added?');if(text?.trim()){weeklyGoals().push({text:text.trim(),done:false});save();renderDay()}};
 addMonthlyGoal.onclick=()=>{const text=prompt('What monthly goal should be added?');if(text?.trim()){monthlyGoals().push({text:text.trim(),done:false});save();renderDay()}};
